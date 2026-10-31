@@ -32,6 +32,8 @@ export const SourceSpanSchema = z
 export type SourceSpan = z.infer<typeof SourceSpanSchema>;
 
 export const SourceTypeSchema = z.enum(["conversation", "document", "tool-output"]);
+export type SourceType = z.infer<typeof SourceTypeSchema>;
+export const SOURCE_TYPES: readonly SourceType[] = SourceTypeSchema.options;
 
 export const ContentRefSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("inline"), text: z.string() }),

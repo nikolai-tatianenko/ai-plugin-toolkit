@@ -13,11 +13,14 @@
       "default": "./dist/run.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b"
   },
   "dependencies": {
-    "@ai-plugin-toolkit/core": "workspace:*"
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*"
   }
 }

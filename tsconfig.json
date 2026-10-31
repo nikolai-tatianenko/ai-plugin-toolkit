@@ -1,4 +1,4 @@
 {
   "files": [],
-  "references": [{ "path": "packages/core" }, { "path": "apps/cli" }]
+  "references": [{ "path": "packages/core" }, { "path": "packages/storage-sqlite" }, { "path": "apps/cli" }]
 }

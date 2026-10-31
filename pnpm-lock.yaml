@@ -23,12 +23,21 @@ importers:
       '@ai-plugin-toolkit/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@ai-plugin-toolkit/storage-sqlite':
+        specifier: workspace:*
+        version: link:../../packages/storage-sqlite
 
   packages/core:
     dependencies:
       zod:
         specifier: 4.6.7
         version: 4.6.7
+
+  packages/storage-sqlite:
+    dependencies:
+      '@ai-plugin-toolkit/core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 
