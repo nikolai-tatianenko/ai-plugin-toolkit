@@ -1,0 +1,23 @@
+{
+  "name": "@ai-plugin-toolkit/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Command-line interface for Context Loom (working name).",
+  "type": "module",
+  "bin": {
+    "loom": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/run.d.ts",
+      "default": "./dist/run.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*"
+  }
+}
