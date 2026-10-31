@@ -228,7 +228,7 @@ export class LoomStore {
 
   auditEvents(projectId: string): Array<{ operation: string; result: string; errorCode: string | null; changedIds: string[] }> {
     const rows = this.db
-      .prepare("SELECT operation, result, error_code, changed_ids FROM audit_events WHERE project_id = ? ORDER BY at, id")
+      .prepare("SELECT operation, result, error_code, changed_ids FROM audit_events WHERE project_id = ? ORDER BY rowid")
       .all(projectId) as Row[];
     return rows.map((r) => ({
       operation: String(r.operation),
