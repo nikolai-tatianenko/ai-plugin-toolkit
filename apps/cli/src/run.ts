@@ -2,7 +2,9 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import { VERSION } from "@ai-plugin-toolkit/core";
 import { configValidateCommand } from "./commands/config.js";
+import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
+import { sourcesListCommand, sourcesShowCommand } from "./commands/sources.js";
 import { EXIT, UsageError, writeFailure, writeSuccess, type CliIo, type CommandResult, type ExitCode } from "./io.js";
 
 export { EXIT, type CliIo, type ExitCode } from "./io.js";
@@ -14,6 +16,9 @@ Usage: loom <command> [options]
 Commands:
   init                 Create loom.config.json and a local storage directory
   config validate      Validate loom.config.json and report its settings
+  ingest <file...>     Store files as source evidence (.json conversation, .md, .txt, .log)
+  sources list         List stored sources
+  sources show <id>    Show a source and its original text
   help                 Show this help
   version              Print the version
 
@@ -28,6 +33,14 @@ init options:
   --name <name>        Display name (default: directory name)
   --dry-run            Report what would be created without writing anything
 
+ingest options:
+  --type <type>        conversation | document | tool-output (default: by file type)
+  --title <title>      Title for a single ingested file
+  --dry-run            Validate and show source IDs without writing anything
+
+sources list options:
+  --limit <n>          Maximum rows to show (default: 100)
+
 Exit codes: 0 success, 1 operation failed, 2 usage error, 70 internal error.
 `;
 
@@ -39,6 +52,9 @@ const OPTIONS = {
   "project-id": { type: "string" },
   name: { type: "string" },
   "dry-run": { type: "boolean", default: false },
+  type: { type: "string" },
+  title: { type: "string" },
+  limit: { type: "string" },
 } as const;
 
 type OptionName = keyof typeof OPTIONS;
@@ -97,6 +113,36 @@ export async function run(argv: readonly string[], io: CliIo): Promise<ExitCode>
         }
         rejectUnsupported(command, values, []);
         result = await configValidateCommand({ rootDir, cwd: io.cwd, env: io.env });
+        break;
+      }
+      case "ingest": {
+        command = "ingest";
+        rejectUnsupported(command, values, ["type", "title", "dry-run"]);
+        result = await ingestCommand({
+          rootDir,
+          cwd: io.cwd,
+          files: positionals.slice(1),
+          type: values.type,
+          title: values.title,
+          dryRun: values["dry-run"],
+          actor: io.env.LOOM_ACTOR ?? io.env.USER ?? "cli",
+        });
+        break;
+      }
+      case "sources": {
+        if (positionals[1] === "list" && positionals.length === 2) {
+          rejectUnsupported(command, values, ["limit"]);
+          const limit = values.limit === undefined ? 100 : Number(values.limit);
+          if (!Number.isInteger(limit) || limit < 1 || limit > 10_000) {
+            throw new UsageError("--limit must be an integer between 1 and 10000.");
+          }
+          result = await sourcesListCommand({ rootDir, limit });
+        } else if (positionals[1] === "show" && positionals.length === 3) {
+          rejectUnsupported(command, values, []);
+          result = await sourcesShowCommand({ rootDir, id: positionals[2]! });
+        } else {
+          throw new UsageError("Usage: loom sources list [--limit <n>] | loom sources show <id>");
+        }
         break;
       }
       default:

@@ -32,3 +32,6 @@ jobs:
           demo="$RUNNER_TEMP/loom-demo"
           node apps/cli/dist/main.js init --dir "$demo" --project-id ci-smoke --json
           node apps/cli/dist/main.js config validate --dir "$demo"
+          node apps/cli/dist/main.js ingest --dir "$demo" examples/synthetic/kickoff-conversation.json
+          node apps/cli/dist/main.js ingest --dir "$demo" examples/synthetic/kickoff-conversation.json --json | grep -q '"existing": 1'
+          node apps/cli/dist/main.js sources list --dir "$demo"
