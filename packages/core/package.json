@@ -1,0 +1,20 @@
+{
+  "name": "@ai-plugin-toolkit/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Validated schemas, plugin contracts, configuration and stable IDs for Context Loom (working name).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "4.6.7"
+  }
+}
