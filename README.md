@@ -1,7 +1,15 @@
 # AI Plugin Toolkit
 
-An open-source project in planning for modular model routing, context preparation, traceable memory, and evidence-based delivery workflows.
+Modular model routing, context preparation, traceable project memory, and evidence-based delivery.
 
-Working product name: Context Loom (not finalized).
+**Status: planning only.** These documents specify intended behavior; no runtime, integrations, benchmarks, or compliance claims have been verified. Context Loom is a working product name, pending availability checks. Repository visibility remains unchanged; a public release and license are still pending.
 
-Status: planning; no runtime implementation has been delivered yet.
+## Planning
+
+- [Vision](.tasks/VISION.md)
+- [Full implementation plan](.tasks/plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md)
+- [Implementation tickets](.tasks/tickets/README.md)
+- [Acceptance and integration test plan](.tasks/test-plan/CONTEXT-LOOM-ACCEPTANCE.md)
+- [Planning conventions](.tasks/README.md)
+
+First demonstration: import a synthetic conversation → inspect sourced facts → generate vision and plan → answer acceptance questions → preview and synchronize tasks through one real adapter → rerun without duplicates.
