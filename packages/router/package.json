@@ -1,0 +1,23 @@
+{
+  "name": "@ai-plugin-toolkit/router",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Policy-based provider routing: capabilities, budgets, timeouts, retries and allowed fallbacks.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

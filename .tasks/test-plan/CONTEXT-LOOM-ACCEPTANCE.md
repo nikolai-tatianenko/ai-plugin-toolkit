@@ -1,6 +1,40 @@
 # Acceptance and integration test plan
 
-Status: planned; no tests have run. Use synthetic fixtures only.
+Status: v0.1 automated suite in place (see the coverage table below). Use synthetic fixtures only.
+
+## v0.1 coverage (2026-11-01)
+
+| ID | Status | Where |
+| --- | --- | --- |
+| A01 | passed | storage, memory and CLI tests |
+| A02 | passed | `memory/test/extract.test.ts`, CLI workflow |
+| A03 | passed | `extract.test.ts`, `retrieval.test.ts`, CLI workflow |
+| A04 | passed | `extract.test.ts` |
+| A05 | passed (storage and retrieval; no caches exist yet) | `store.test.ts`, `retrieval.test.ts` |
+| A06 | partial: supersession and current-decision retrieval pass; correction workflow and regeneration are CL-013 | `extract.test.ts`, `retrieval.test.ts` |
+| A07 | passed | `artifacts.test.ts`, CLI workflow |
+| A08 | passed | `acceptance.test.ts` |
+| A09 | passed | `acceptance.test.ts`, CLI workflow |
+| A10 | passed | `acceptance.test.ts` |
+| A11 | passed | `acceptance.test.ts`, CLI workflow |
+| A12 | passed | `acceptance.test.ts`, CLI workflow |
+| A13 | passed | `acceptance.test.ts`, CLI workflow |
+| A14 | passed against the reference adapter; real Beads **not run** | `task-sync/test/sync.test.ts`; `adapter-beads/test/beads.integration.test.ts` (skipped) |
+| A15 | passed against the reference adapter; real Beads **not run** | same |
+| A16 | passed against the reference adapter; real Beads **not run** | same |
+| A17 | passed against the reference adapter; real Beads **not run** | same |
+| A18 | passed | `router.test.ts`, `extract.test.ts` |
+| A19 | passed (config and runtime) | `config.test.ts`, `router.test.ts` |
+| A20 | passed | `extract.test.ts`, `retrieval.test.ts` |
+| A21 | deferred (CL-013) | — |
+| A22 | passed | `plugins.test.ts`, `sync.test.ts`, `beads.unit.test.ts` |
+| A23 | passed | `config.test.ts`, `store.test.ts`, `beads.unit.test.ts` |
+| A24 | deferred (no caches until CL-015) | — |
+| A25 | deferred (CL-016) | — |
+| A26 | passed up to `tasks preview`; ingest-to-sync needs real Beads | fresh-clone run, `examples/synthetic/demo.sh` |
+| A27 | not supported in v0.1 (no local inference) | — |
+
+The release gate "one real adapter" is **open** until the real Beads suites run. GitHub Actions has not run on this branch.
 
 ## Required automated integration workflows
 

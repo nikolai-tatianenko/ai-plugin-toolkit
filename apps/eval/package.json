@@ -1,0 +1,28 @@
+{
+  "name": "@ai-plugin-toolkit/eval",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reproducible extraction evaluation over synthetic, annotated datasets.",
+  "type": "module",
+  "bin": {
+    "loom-eval": "./dist/main.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/harness.d.ts",
+      "default": "./dist/harness.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/router": "workspace:*",
+    "@ai-plugin-toolkit/provider-anthropic": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*",
+    "zod": "4.6.7"
+  }
+}

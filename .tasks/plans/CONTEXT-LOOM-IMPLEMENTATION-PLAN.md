@@ -1,6 +1,6 @@
 # Context Loom implementation plan
 
-Status: proposed; implementation not started. Repository name remains ai-plugin-toolkit. Working product name is not finalized.
+Status: v0.1 implementation in review (CL-001–CL-012, see [tickets](../tickets/README.md)); real Beads verification pending. Repository name remains ai-plugin-toolkit. Working product name is not finalized.
 
 ## 1. End-to-end behavior
 

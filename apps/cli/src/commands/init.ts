@@ -2,8 +2,9 @@ import { mkdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
   CONFIG_FILENAME,
+  CONFIG_VERSION,
   LoomError,
-  defaultConfig,
+  parseConfig,
   resolveStorageDir,
   slugifyProjectId,
 } from "@ai-plugin-toolkit/core";
@@ -14,6 +15,33 @@ export interface InitOptions {
   projectId?: string | undefined;
   name?: string | undefined;
   dryRun: boolean;
+  /** Extraction provider to configure: "anthropic" (Claude, remote) or "fixture" (recorded responses, local). */
+  provider?: string | undefined;
+  fixture?: string | undefined;
+  /** Task system to configure ("beads"). */
+  tasks?: string | undefined;
+  allowTaskWrites?: boolean;
+}
+
+function providerSection(provider: string | undefined, fixture: string | undefined): Record<string, unknown> {
+  if (provider === undefined) {
+    if (fixture !== undefined) throw new UsageError("--fixture requires --provider fixture.");
+    return {};
+  }
+  if (provider === "anthropic") {
+    return {
+      providers: { claude: { adapter: "anthropic", location: "remote", model: "claude-opus-5-5", apiKeyEnv: "ANTHROPIC_API_KEY" } },
+      routing: { extraction: { providers: ["claude"], timeoutMs: 120_000, maxAttempts: 2, maxOutputTokens: 16_000 } },
+    };
+  }
+  if (provider === "fixture") {
+    if (fixture === undefined) throw new UsageError("--provider fixture needs --fixture <path to recorded responses>.");
+    return {
+      providers: { recorded: { adapter: "fixture", location: "local", fixture } },
+      routing: { extraction: { providers: ["recorded"], maxAttempts: 1 } },
+    };
+  }
+  throw new UsageError(`Unknown --provider "${provider}". Choose anthropic or fixture.`);
 }
 
 /** Keeps raw evidence (conversations, tool logs) out of version control by default. */
@@ -39,8 +67,15 @@ export async function initCommand(options: InitOptions): Promise<CommandResult> 
     throw new UsageError(`Cannot derive a project ID from "${baseName}". Pass --project-id <id>.`);
   }
 
+  if (options.tasks !== undefined && options.tasks !== "beads") throw new UsageError(`Unknown --tasks "${options.tasks}". Supported: beads.`);
+  if (options.allowTaskWrites && options.tasks === undefined) throw new UsageError("--allow-task-writes requires --tasks beads.");
   // Validates the ID/name through the same schema a config file must satisfy.
-  const config = defaultConfig({ id: projectId, name: options.name ?? baseName });
+  const config = parseConfig({
+    $schemaVersion: CONFIG_VERSION,
+    project: { id: projectId, name: options.name ?? baseName },
+    ...providerSection(options.provider, options.fixture),
+    ...(options.tasks === undefined ? {} : { tasks: { adapter: options.tasks, allowWrites: options.allowTaskWrites === true } }),
+  });
   const storageDir = resolveStorageDir(rootDir, config);
 
   if (await exists(configPath)) {

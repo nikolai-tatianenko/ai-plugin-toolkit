@@ -59,12 +59,15 @@ export const SourceSchema = z.strictObject({
 });
 export type Source = z.infer<typeof SourceSchema>;
 
+export const FactKindSchema = z.enum(["fact", "goal", "requirement", "preference", "constraint", "event"]);
+export type FactKind = z.infer<typeof FactKindSchema>;
+
 export const FactSchema = z
   .strictObject({
     id: idOf("fact"),
     projectId: ProjectIdSchema,
     statement: NonEmpty,
-    kind: z.enum(["fact", "preference", "constraint", "event"]),
+    kind: FactKindSchema,
     spans: z.array(SourceSpanSchema).min(1, "A fact must cite at least one source span"),
     status: z.enum(["candidate", "confirmed", "rejected", "superseded"]),
     supersededBy: idOf("fact").optional(),
@@ -83,6 +86,8 @@ export const DecisionSchema = z
     id: idOf("decision"),
     projectId: ProjectIdSchema,
     choice: NonEmpty,
+    /** Short subject the decision is about (e.g. "storage"); a newer confirmed decision on the same topic supersedes older ones. */
+    topic: NonEmpty.max(100).optional(),
     rationale: NonEmpty.optional(),
     alternatives: z.array(NonEmpty).default([]),
     /** A proposal is never a decision until someone confirms it. */
