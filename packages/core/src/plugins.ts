@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UnsupportedCapabilityError } from "./errors.js";
+import { LoomError, UnsupportedCapabilityError } from "./errors.js";
 import { parseWith } from "./schemas.js";
 
 /**
@@ -46,10 +46,14 @@ export interface CompletionMessage {
 
 export interface CompletionRequest {
   model: string;
+  /** Operator instructions. Kept separate from `messages` so untrusted evidence never lands here. */
+  system?: string;
   messages: readonly CompletionMessage[];
   maxOutputTokens?: number;
   /** Ask for JSON output. Requires the `json-output` capability. */
   responseFormat?: "text" | "json";
+  /** JSON Schema the output must satisfy when `responseFormat` is `json` (provider-enforced where supported). */
+  jsonSchema?: Record<string, unknown>;
 }
 
 export interface Usage {
@@ -63,6 +67,51 @@ export interface CompletionResult {
   text: string;
   model: string;
   usage: Usage;
+  /** Provider stop reason, verbatim (e.g. `end_turn`). */
+  stopReason?: string;
+}
+
+export const PROVIDER_FAILURE_CATEGORIES = [
+  "timeout",
+  "rate-limited",
+  "overloaded",
+  "server-error",
+  "network",
+  "auth",
+  "bad-request",
+  "refusal",
+  "truncated",
+  "invalid-output",
+  "cancelled",
+  "unknown",
+] as const;
+export type ProviderFailureCategory = (typeof PROVIDER_FAILURE_CATEGORIES)[number];
+
+/** Categories worth retrying on the same provider. Everything else fails fast (plan §4). */
+export const TRANSIENT_FAILURES: ReadonlySet<ProviderFailureCategory> = new Set([
+  "timeout",
+  "rate-limited",
+  "overloaded",
+  "server-error",
+  "network",
+  "truncated",
+  "invalid-output",
+]);
+
+/** Typed provider failure. `category` decides retry and fallback; messages never contain prompt text or secrets. */
+export class ProviderError extends LoomError {
+  readonly category: ProviderFailureCategory;
+  readonly transient: boolean;
+
+  constructor(category: ProviderFailureCategory, message: string, options?: { cause?: unknown; details?: Record<string, unknown> }) {
+    super(category === "timeout" ? "TIMEOUT" : category === "cancelled" ? "CANCELLED" : "PROVIDER_FAILED", message, {
+      details: { category, ...options?.details },
+      ...(options?.cause === undefined ? {} : { cause: options.cause }),
+    });
+    this.name = "ProviderError";
+    this.category = category;
+    this.transient = TRANSIENT_FAILURES.has(category);
+  }
 }
 
 export interface ProviderAdapter {
@@ -80,12 +129,16 @@ export interface ExternalTask {
   status: "open" | "in-progress" | "closed";
   /** Opaque remote revision marker used for conflict detection. */
   revision: string;
+  /** Key stored on the remote record at creation, if the upstream can hold one. */
+  idempotencyKey?: string;
+  /** External IDs this task depends on, when the upstream reports them. */
+  dependsOn?: string[];
 }
 
 export interface TaskDraft {
   title: string;
   description?: string;
-  /** Lets the adapter (or upstream) detect a retried create. */
+  /** Stored on the remote record so a retried create can be detected and adopted. */
   idempotencyKey: string;
 }
 

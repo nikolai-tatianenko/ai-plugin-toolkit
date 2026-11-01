@@ -10,7 +10,8 @@
     "build": "tsc -b",
     "clean": "tsc -b --clean",
     "test": "vitest run",
-    "check": "pnpm build && pnpm test"
+    "check": "pnpm build && pnpm test",
+    "eval": "node apps/eval/dist/main.js"
   },
   "devDependencies": {
     "@types/node": "22.20.5",

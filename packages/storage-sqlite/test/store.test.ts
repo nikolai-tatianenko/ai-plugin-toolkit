@@ -46,14 +46,14 @@ describe("migrations", () => {
       ...MIGRATIONS,
       { version: MIGRATIONS.length + 1, name: "broken", sql: "CREATE TABLE half_done (x TEXT); SELECT * FROM no_such_table;" },
     ];
-    await expect(open({ migrations: broken })).rejects.toThrow(/rolled back; database remains at version 1/);
+    await expect(open({ migrations: broken })).rejects.toThrow(new RegExp(`rolled back; database remains at version ${MIGRATIONS.length}`));
 
     const raw = new DatabaseSync(path.join(dir, DATABASE_FILENAME));
     expect(raw.prepare("SELECT name FROM sqlite_master WHERE name = 'half_done'").get()).toBeUndefined();
     raw.close();
 
     using recovered = await open();
-    expect(recovered.schemaVersion()).toBe(1);
+    expect(recovered.schemaVersion()).toBe(MIGRATIONS.length);
     expect(recovered.countSources("demo")).toBe(1);
   });
 

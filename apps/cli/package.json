@@ -21,6 +21,14 @@
   },
   "dependencies": {
     "@ai-plugin-toolkit/core": "workspace:*",
-    "@ai-plugin-toolkit/storage-sqlite": "workspace:*"
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/router": "workspace:*",
+    "@ai-plugin-toolkit/provider-anthropic": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*",
+    "@ai-plugin-toolkit/retrieval": "workspace:*",
+    "@ai-plugin-toolkit/acceptance": "workspace:*",
+    "@ai-plugin-toolkit/artifacts": "workspace:*",
+    "@ai-plugin-toolkit/task-sync": "workspace:*",
+    "@ai-plugin-toolkit/adapter-beads": "workspace:*"
   }
 }

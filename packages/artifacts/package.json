@@ -1,0 +1,28 @@
+{
+  "name": "@ai-plugin-toolkit/artifacts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*",
+    "@ai-plugin-toolkit/acceptance": "workspace:*"
+  },
+  "devDependencies": {
+    "@ai-plugin-toolkit/router": "workspace:*"
+  },
+  "description": "Versioned Markdown artifacts with provenance and manual-edit protection."
+}
