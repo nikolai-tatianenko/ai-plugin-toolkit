@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: build and test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm test
+      - name: CLI smoke test from a clean checkout
+        run: |
+          demo="$RUNNER_TEMP/loom-demo"
+          node apps/cli/dist/main.js init --dir "$demo" --project-id ci-smoke --json
+          node apps/cli/dist/main.js config validate --dir "$demo"
+          node apps/cli/dist/main.js ingest --dir "$demo" examples/synthetic/kickoff-conversation.json
+          node apps/cli/dist/main.js ingest --dir "$demo" examples/synthetic/kickoff-conversation.json --json | grep -q '"existing": 1'
+          node apps/cli/dist/main.js sources list --dir "$demo"
