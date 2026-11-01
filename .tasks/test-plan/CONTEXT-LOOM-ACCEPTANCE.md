@@ -34,7 +34,7 @@ Status: v0.1 automated suite in place (see the coverage table below). Use synthe
 | A26 | passed up to `tasks preview`; ingest-to-sync needs real Beads | fresh-clone run, `examples/synthetic/demo.sh` |
 | A27 | not supported in v0.1 (no local inference) | — |
 
-The release gate "one real adapter" is **open** until the real Beads suites run. GitHub Actions has not run on this branch.
+The release gate "one real adapter" is **open** until the real Beads suites run. GitHub Actions passed on Node 22 and 24 for commit a325ecc (run 41337641516).
 
 ## Required automated integration workflows
 
