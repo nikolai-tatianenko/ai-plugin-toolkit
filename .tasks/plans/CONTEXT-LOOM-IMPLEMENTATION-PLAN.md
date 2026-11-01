@@ -1,6 +1,6 @@
 # Context Loom implementation plan
 
-Status: v0.1 implementation in review (CL-001–CL-012, see [tickets](../tickets/README.md)); real Beads verification pending. Repository name remains ai-plugin-toolkit. Working product name is not finalized.
+Status: v0.1 implementation in review (CL-001–CL-012, see [tickets](../tickets/README.md)); real Beads verification pending. What is left: [§14](#14-remaining-work-as-of-2026-11-01). Repository name remains ai-plugin-toolkit. Working product name is not finalized.
 
 ## 1. End-to-end behavior
 
@@ -174,6 +174,52 @@ Compare full-history and simple retrieval baselines using the same model and dat
 Choose license, check naming/package availability and dependency licenses, create CONTRIBUTING and SECURITY documentation, provide a clean-machine quickstart and synthetic demo, establish CI and a compatibility matrix, and publish honest limitations. Add short architecture decisions for SQLite, plugin contracts, evidence lifecycle, and sync ownership.
 
 Repository publication, package publication, hosting, and production credentials are final release activities after local gates pass. This planning change does not authorize changing visibility or publishing packages.
+
+## 14. Remaining work (as of 2026-11-01)
+
+Implemented: CL-001 to CL-010, CL-011/CL-012 code, and part of CL-021, in PR #4 (CI green on Node 22 and 24). This section lists what is still open, in the order it should be done.
+
+### 14.1 Close the v0.1 gate (required)
+
+| # | Work | Ticket | Done when |
+| --- | --- | --- | --- |
+| 1 | Run the real Beads suites: install `bd` 1.3.x (`npm install -g @beads/bd@1.3.2`) and run `pnpm test`, or set `LOOM_BD_BIN` | CL-011 | `beads.integration.test.ts` (A14–A17, A22 against real `bd`) and the CLI publish/rerun test pass; output recorded in `docs/adapters/beads.md` and CL-011 |
+| 2 | Fix any real-`bd` incompatibilities found in step 1 (JSON shapes, `updated_at` precision, `dep add` output) | CL-011 | same suites green |
+| 3 | Demonstrate a clean install from ingest to sync (A26 in full), including `tasks sync` in `demo.sh` when `bd` is present | CL-012 | fresh clone run recorded in CL-012 |
+| 4 | Review and merge PR #4; move CL-011 and CL-012 from `blocked` to `implemented` | — | merged, ticket statuses updated |
+
+### 14.2 Strongly recommended before calling v0.1 done
+
+| # | Work | Ticket | Why |
+| --- | --- | --- | --- |
+| 5 | One opt-in live run with Claude: `LOOM_LIVE_TESTS=1 pnpm test` and `pnpm eval -- --provider anthropic` (bounded budget, synthetic data) | CL-003, CL-021 | the provider has only been tested against a local stub; no real model output has been measured |
+| 6 | Human review of `eval/datasets/extraction-v1/annotations.json`; record the reviewer in the file | CL-021 | eval results stay provisional until then |
+| 7 | Run full-history and simple-retrieval baselines with the same model and dataset, then pick release thresholds | CL-021 | test plan requires a baseline before thresholds; no comparative claim exists |
+| 8 | Review the mobile pack's platform and legal criteria (account deletion, privacy disclosures, children, ads) against current store and legal sources | CL-007 | currently marked advisory |
+
+### 14.3 Known v0.1 limitations to fix or accept
+
+- `loom` is not installed on `PATH`; no upward search for `loom.config.json`.
+- No lint/format tooling.
+- `ingest --dry-run` does not report which sources already exist; only `.json`, `.md`, `.markdown`, `.txt` and `.log` imports.
+- Only built-in topic packs; custom pack files are not loadable from the CLI.
+- The project revision is set by hand (`loom revision set`), not read from git/CI.
+- Price table for Claude models is static; unlisted models report unknown cost.
+- Beads adapter has no compare-and-set (check then update), see `docs/adapters/beads.md`.
+- A claim quoted verbatim from injected text passes validation; only review and evaluation catch it (ADR 0005).
+- Restricted projects can only use the fixture provider (no local inference).
+
+### 14.4 Later milestones (unchanged scope, not started)
+
+| Milestone | Tickets |
+| --- | --- |
+| v0.2 | CL-013 corrections, conflicts, deletion and retention (A06 full, A21); CL-014 second adapter (Task Master, see `docs/adapters/task-master.md`) |
+| v0.3 | CL-015 caches and optional embeddings (A24); CL-016 controlled-English normalization (A25); CL-017 MCP interface; CL-018 more topic packs and evidence importers |
+| v0.4 | CL-019 two-way sync and recovery; CL-020 React inspector |
+| v0.1 onward | CL-021 remaining evaluation work (items 5–7 above) |
+| release | CL-022 license, dependency licenses, CONTRIBUTING/SECURITY, name check, then separately authorized publication |
+
+Not supported by any milestone yet: fully local operation with local inference (A27) and multi-user permissions.
 
 ## References and status
 

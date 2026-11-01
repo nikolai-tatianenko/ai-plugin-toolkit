@@ -1,6 +1,6 @@
 # Implementation tickets
 
-Status reflects recorded evidence; **implemented does not mean verified or release-ready**. `blocked` means the code exists but the ticket's acceptance criterion cannot be met yet. Dependency IDs establish execution order; milestones describe scope rather than guaranteed dates. See the [full plan](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md) and [test plan](../test-plan/CONTEXT-LOOM-ACCEPTANCE.md).
+Status reflects recorded evidence; **implemented does not mean verified or release-ready**. `blocked` means the code exists but the ticket's acceptance criterion cannot be met yet. Dependency IDs establish execution order; milestones describe scope rather than guaranteed dates. Remaining work is summarized in [plan §14](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md#14-remaining-work-as-of-2026-11-01). See the [full plan](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md) and [test plan](../test-plan/CONTEXT-LOOM-ACCEPTANCE.md).
 
 | ID | Work | Milestone | Depends on | Status |
 | --- | --- | --- | --- | --- |
