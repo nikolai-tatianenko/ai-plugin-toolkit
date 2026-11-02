@@ -12,11 +12,11 @@ import {
   type Evaluation,
   type QuestionState,
 } from "./evaluate.js";
-import { questionHash, type TopicPack } from "./pack.js";
+import { criterionHash, questionHash, type TopicPack } from "./pack.js";
 
-export function activatePack(store: LoomStore, projectId: string, pack: TopicPack, actor: string): void {
+export function activatePack(store: LoomStore, projectId: string, pack: TopicPack, actor: string, source = "builtin"): void {
   store.transaction(() => {
-    store.acceptance.activatePack(projectId, pack.id, pack.version);
+    store.acceptance.activatePack(projectId, pack.id, pack.version, source);
     store.audit(projectId, "acceptance.activate", actor, [pack.id]);
   });
 }
@@ -111,7 +111,7 @@ export function waiveCriterion(store: LoomStore, projectId: string, pack: TopicP
   if (input.reason.trim() === "") throw new LoomError("VALIDATION_FAILED", "A waiver needs a reason (--reason).");
   const id = criterionId(projectId, pack.id, criterion.id);
   store.transaction(() => {
-    store.acceptance.setDisposition(projectId, { criterionId: id, disposition: "waived", actor: input.actor, reason: input.reason });
+    store.acceptance.setDisposition(projectId, { criterionId: id, disposition: "waived", actor: input.actor, reason: input.reason, packVersion: pack.version, criterionHash: criterionHash(criterion) });
     store.audit(projectId, "acceptance.waive", input.actor, [id]);
   });
 }
@@ -121,7 +121,7 @@ export function acceptCriterion(store: LoomStore, projectId: string, pack: Topic
   const criterion = resolveCriterion(projectId, pack, input.criterion);
   const id = criterionId(projectId, pack.id, criterion.id);
   store.transaction(() => {
-    store.acceptance.setDisposition(projectId, { criterionId: id, disposition: "accepted", actor: input.actor, reason: input.note });
+    store.acceptance.setDisposition(projectId, { criterionId: id, disposition: "accepted", actor: input.actor, reason: input.note, packVersion: pack.version, criterionHash: criterionHash(criterion) });
     store.audit(projectId, "acceptance.accept", input.actor, [id]);
   });
 }

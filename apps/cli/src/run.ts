@@ -7,6 +7,7 @@ import {
   criteriaListCommand,
   dispositionCommand,
   evidenceAddCommand,
+  evidenceImportCommand,
   questionsCommand,
   reportCommand,
   revisionCommand,
@@ -72,11 +73,13 @@ Artifacts
   generate [types...]        Write FACTS, VISION, PLAN, STATUS, ACCEPTANCE and decision records
 
 Acceptance
-  assess --pack <id>         Activate a topic pack (built-in: mobile-release) and summarize
+  assess --pack <id>         Activate a topic pack and summarize (built-in: mobile-release,
+                             open-source-release, web-release, ai-feature; or --pack-file <path>)
   questions                  What to answer next (--mode quick|guided|challenge)
   answer <question> <value>  Record a stated answer
   criteria list              Applicability, verification and disposition of every criterion
   evidence add <criterion>   Attach evidence (--result, --env, --revision, --description, --ref)
+  evidence import <file>     Import JUnit XML, loom-build/1 JSON or loom-review/1 Markdown results
   waive <criterion>          Waive with --reason (recorded with actor; never shown as passed)
   accept | reopen <criterion> Record or clear human acceptance
   revision set <rev> | show  Current source/build revision (older evidence becomes stale)
@@ -144,6 +147,8 @@ const OPTIONS = {
   semantic: { type: "boolean", default: false },
   model: { type: "string" },
   embeddings: { type: "string" },
+  "pack-file": { type: "string" },
+  format: { type: "string" },
 } as const;
 
 type OptionName = keyof typeof OPTIONS;
@@ -291,7 +296,32 @@ const COMMANDS: Command[] = [
     usage: "loom retention apply --yes",
     run: (inv) => ok(retentionCommand({ ...base(inv), apply: true, yes: inv.values.yes === true })),
   },
-  { words: ["assess"], args: 0, options: ["pack"], usage: "loom assess --pack <id>", run: (inv) => ok(assessCommand({ ...base(inv), pack: inv.values.pack })) },
+  {
+    words: ["assess"],
+    args: 0,
+    options: ["pack", "pack-file"],
+    usage: "loom assess --pack <id> | --pack-file <path>",
+    run: (inv) => ok(assessCommand({ ...base(inv), cwd: inv.cwd, pack: inv.values.pack, packFile: inv.values["pack-file"] })),
+  },
+  {
+    words: ["evidence", "import"],
+    args: 1,
+    options: ["pack", "format", "revision", "env", "dry-run"],
+    usage: "loom evidence import <file> [--format junit-xml/1|loom-build/1|loom-review/1] [--revision <rev>] [--env <kind>] [--dry-run]",
+    run: (inv) =>
+      ok(
+        evidenceImportCommand({
+          ...base(inv),
+          cwd: inv.cwd,
+          pack: inv.values.pack,
+          file: inv.args[0]!,
+          format: inv.values.format,
+          revision: inv.values.revision,
+          environment: inv.values.env,
+          dryRun: inv.values["dry-run"] === true,
+        }),
+      ),
+  },
   {
     words: ["questions"],
     args: 0,

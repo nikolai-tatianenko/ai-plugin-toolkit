@@ -1,4 +1,4 @@
-import { activePackId, loadBuiltinPack, type TopicPack } from "@ai-plugin-toolkit/acceptance";
+import { activePackId, loadBuiltinPack, loadPackFile, type TopicPack } from "@ai-plugin-toolkit/acceptance";
 import { createBeadsAdapter, type BeadsAdapter } from "@ai-plugin-toolkit/adapter-beads";
 import { LoomError, resolveProjectPath, type ProviderConfig } from "@ai-plugin-toolkit/core";
 import { createAnthropicProvider } from "@ai-plugin-toolkit/provider-anthropic";
@@ -58,6 +58,13 @@ export async function withProject<T>(
   const store = await LoomStore.open({ storageDir: loaded.storageDir });
   const projectId = loaded.config.project.id;
   const actor = io.env.LOOM_ACTOR ?? io.env.USER ?? "cli";
+  // Built-in packs load from the package; custom packs from the project file recorded at activation.
+  const loadActivated = async (activation: { packId: string; source: string }): Promise<TopicPack> => {
+    if (activation.source === "builtin") return loadBuiltinPack(activation.packId);
+    const pack = await loadPackFile(resolveProjectPath(loaded.rootDir, activation.source, "pack file"));
+    if (pack.id !== activation.packId) throw new LoomError("CONFIG_INVALID", `${activation.source} now defines pack "${pack.id}", but "${activation.packId}" was activated from it.`);
+    return pack;
+  };
   let router: Router | undefined;
   let adapter: BeadsAdapter | undefined;
   const ctx: ProjectContext = {
@@ -108,10 +115,11 @@ export async function withProject<T>(
       return adapter;
     },
     async pack(requested) {
-      return loadBuiltinPack(activePackId(store, projectId, requested));
+      const id = activePackId(store, projectId, requested);
+      return loadActivated(store.acceptance.activePacks(projectId).find((p) => p.packId === id)!);
     },
     async activePacks() {
-      return Promise.all(store.acceptance.activePacks(projectId).map((p) => loadBuiltinPack(p.packId)));
+      return Promise.all(store.acceptance.activePacks(projectId).map(loadActivated));
     },
   };
   try {

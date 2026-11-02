@@ -62,6 +62,17 @@ export const PackCriterionSchema = z.strictObject({
     environments: z.array(EvidenceEnvironmentKindSchema.exclude(["mock"])).min(1),
   }),
   task: z.strictObject({ title: z.string().min(1).max(300), description: z.string().min(1) }),
+  /**
+   * How imported results map to this criterion (CL-018). Patterns are case-insensitive
+   * regular expressions, matched against "classname.name" for JUnit and the check name
+   * for build/CI reports.
+   */
+  evidence: z
+    .strictObject({
+      junit: z.array(z.string().min(1)).default([]),
+      checks: z.array(z.string().min(1)).default([]),
+    })
+    .optional(),
   /** Task dependencies by criterion id. */
   dependsOn: z.array(KeySchema).default([]),
 });
@@ -111,16 +122,29 @@ export const TopicPackSchema = z
       if (!topics.has(c.topic)) issue(["criteria", i, "topic"], `Unknown topic "${c.topic}"`);
       checkCondition(c.applicableWhen, ["criteria", i, "applicableWhen"]);
       for (const dep of c.dependsOn) if (!criteria.has(dep)) issue(["criteria", i, "dependsOn"], `Unknown criterion "${dep}"`);
+      for (const pattern of [...(c.evidence?.junit ?? []), ...(c.evidence?.checks ?? [])]) {
+        try {
+          new RegExp(pattern, "i");
+        } catch {
+          issue(["criteria", i, "evidence"], `Invalid pattern ${JSON.stringify(pattern)}`);
+        }
+      }
     });
   });
 export type TopicPack = z.infer<typeof TopicPackSchema>;
+
+/** Identifies what a criterion means; a waiver made against a different definition is not carried over silently. */
+export function criterionHash(criterion: PackCriterion): string {
+  const { task: _task, dependsOn: _deps, evidence: _evidence, ...meaning } = criterion;
+  return contentHash(JSON.stringify(meaning));
+}
 
 /** Identifies a question's wording and answer options; an answer to a different hash must be asked again (A08). */
 export function questionHash(question: PackQuestion): string {
   return contentHash(JSON.stringify([question.id, question.text, question.answer]));
 }
 
-export const BUILTIN_PACKS = ["mobile-release"] as const;
+export const BUILTIN_PACKS = ["mobile-release", "open-source-release", "web-release", "ai-feature"] as const;
 
 export function parsePack(raw: unknown, label = "topic pack"): TopicPack {
   return parseWith(TopicPackSchema, raw, label);
