@@ -32,6 +32,7 @@ import {
   memoryShowCommand,
   cacheCommand,
   embedCommand,
+  normalizeCommand,
   requireNumber,
   searchCommand,
 } from "./commands/memory.js";
@@ -70,6 +71,7 @@ Evidence and memory
   context <words...>         Assemble a bounded, cited context (--max-chars); cached per memory revision
   embed                      Compute missing embeddings (routing.embedding); search --semantic uses them
   cache stats | clear        Retrieval/context/embedding cache sizes and hits
+  normalize <text...>        Experimental plain-English rewrite with meaning checks (--file, --via-model)
 
 Corrections and lifecycle
   correct <topic> <choice>   Record a person's decision (--reason); supersedes the current one
@@ -165,6 +167,9 @@ const OPTIONS = {
   model: { type: "string" },
   embeddings: { type: "string" },
   "pack-file": { type: "string" },
+  normalize: { type: "boolean", default: false },
+  "via-model": { type: "boolean", default: false },
+  file: { type: "string" },
   format: { type: "string" },
 } as const;
 
@@ -264,9 +269,17 @@ const COMMANDS: Command[] = [
   {
     words: ["context"],
     args: [1, 100],
-    options: ["max-chars"],
-    usage: "loom context <words...> [--max-chars <n>]",
-    run: (inv) => ok(contextCommand({ ...base(inv), query: inv.args.join(" "), maxChars: requireNumber(inv.values["max-chars"], "max-chars", 8_000, 200, 1_000_000) })),
+    options: ["max-chars", "normalize"],
+    usage: "loom context <words...> [--max-chars <n>] [--normalize]",
+    run: (inv) =>
+      ok(contextCommand({ ...base(inv), query: inv.args.join(" "), maxChars: requireNumber(inv.values["max-chars"], "max-chars", 8_000, 200, 1_000_000), normalize: inv.values.normalize === true })),
+  },
+  {
+    words: ["normalize"],
+    args: [0, 10_000],
+    options: ["file", "via-model"],
+    usage: "loom normalize <text...> | --file <path> [--via-model]",
+    run: (inv) => ok(normalizeCommand({ ...base(inv), text: inv.args.join(" "), file: inv.values.file, model: inv.values["via-model"] === true, cwd: inv.cwd })),
   },
   { words: ["embed"], args: 0, options: [], usage: "loom embed", run: (inv) => ok(embedCommand(base(inv))) },
   { words: ["cache", "stats"], args: 0, options: [], usage: "loom cache stats", run: (inv) => ok(cacheCommand({ ...base(inv), clear: false })) },

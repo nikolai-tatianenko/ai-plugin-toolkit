@@ -1,6 +1,9 @@
 import { LoomError, isIdOf } from "@ai-plugin-toolkit/core";
 import { describeRecord, extractAll, extractSource, type ExtractResult } from "@ai-plugin-toolkit/memory";
 import { cachedContext, cachedSearch, ensureEmbeddings, hybridSearch } from "@ai-plugin-toolkit/retrieval";
+import { RULES_TRANSFORMER, RULES_VERSION, normalizeCached, normalizeWithModel, normalizeWithRules } from "@ai-plugin-toolkit/normalize";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { withProject } from "../context.js";
 import { UsageError, type CommandResult } from "../io.js";
 
@@ -110,10 +113,13 @@ export async function searchCommand(options: Base & { query: string; all: boolea
   });
 }
 
-export async function contextCommand(options: Base & { query: string; maxChars: number }): Promise<CommandResult> {
-  if (options.query.trim() === "") throw new UsageError("Usage: loom context <words...> [--max-chars <n>]");
+export async function contextCommand(options: Base & { query: string; maxChars: number; normalize?: boolean }): Promise<CommandResult> {
+  if (options.query.trim() === "") throw new UsageError("Usage: loom context <words...> [--max-chars <n>] [--normalize]");
   return withProject(options.rootDir, options, async (ctx) => {
-    const { value: context, cache } = await cachedContext(ctx.store, ctx.projectId, options.query, { maxChars: options.maxChars }, ctx.permissions);
+    const transform = options.normalize
+      ? { name: `${RULES_TRANSFORMER}@${RULES_VERSION}`, apply: (text: string) => normalizeCached(ctx.store, ctx.projectId, text).output }
+      : undefined;
+    const { value: context, cache } = await cachedContext(ctx.store, ctx.projectId, options.query, { maxChars: options.maxChars, ...(transform ? { transformStatement: transform } : {}) }, ctx.permissions);
     return {
       data: { ...(context as unknown as Record<string, unknown>), cache },
       lines: [context.text.trimEnd(), "", `(${context.usedChars}/${context.maxChars} chars; ${context.included.length} included, ${context.omitted.length} omitted; cache ${cache})`],
@@ -153,4 +159,25 @@ export function requireNumber(value: string | undefined, name: string, fallback:
 
 export function notFound(what: string): never {
   throw new LoomError("NOT_FOUND", what);
+}
+
+export async function normalizeCommand(options: Base & { text: string; file?: string | undefined; model: boolean; cwd: string }): Promise<CommandResult> {
+  const input = options.file === undefined ? options.text : await readFile(path.resolve(options.cwd, options.file), "utf8");
+  if (input.trim() === "") throw new UsageError("Usage: loom normalize <text...> | --file <path> [--via-model]");
+  const run = async () => {
+    if (!options.model) return normalizeWithRules(input);
+    return withProject(options.rootDir, options, async (ctx) => normalizeWithModel(input, ctx.router()));
+  };
+  const result = await run();
+  return {
+    data: result as unknown as Record<string, unknown>,
+    lines: [
+      result.output,
+      "",
+      `(${result.status} by ${result.transformer}@${result.version}${result.status === "fallback" ? `; failed checks: ${result.invariants.checks.filter((c) => !c.ok).map((c) => c.name).join(", ")} — original kept` : ""})`,
+      ...result.changes.map((c) => `  ~ ${c}`),
+      ...result.advisories.map((a) => `  ! ${a.kind}: ${a.sentence}`),
+      "Experimental plain-language rewrite; not ASD-STE100 compliant (see docs/normalization.md).",
+    ],
+  };
 }

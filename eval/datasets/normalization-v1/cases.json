@@ -1,0 +1,18 @@
+{
+  "dataset": "normalization-v1",
+  "version": "1.0.0",
+  "review": "Written by the implementing agent; not yet reviewed by a person. Each case lists text that must appear unchanged in the output.",
+  "cases": [
+    { "id": "negation-1", "category": "negation", "text": "In order to utilize offline mode, the app must not require a network connection.", "mustContain": ["must not", "network connection"] },
+    { "id": "negation-2", "category": "negation", "text": "Do not commence the migration without a backup.", "mustContain": ["Do not", "without a backup"] },
+    { "id": "negation-3", "category": "negation", "text": "The release can't ship unless the purchase restore test passes.", "mustContain": ["can't", "unless"] },
+    { "id": "numbers-1", "category": "numbers", "text": "Sessions terminate after approximately 30 min; retry at most 3 times with 250 ms backoff.", "mustContain": ["30 min", "3 times", "250 ms"] },
+    { "id": "numbers-2", "category": "numbers", "text": "Prior to v2.1.0, the limit is 1,000 requests per day.", "mustContain": ["v2.1.0", "1,000", "per day"] },
+    { "id": "code-1", "category": "code", "text": "Set `LOOM_ACTOR` in order to facilitate audit records; see ```loom init --dir demo``` for setup.", "mustContain": ["`LOOM_ACTOR`", "```loom init --dir demo```"] },
+    { "id": "code-2", "category": "code", "text": "Modify src/router/policy.ts so that maxAttempts never exceeds 5.", "mustContain": ["src/router/policy.ts", "maxAttempts", "never", "5"] },
+    { "id": "quote-1", "category": "quotation", "text": "The user said \"utilize the old flow\" and we will not modify the quote.", "mustContain": ["\"utilize the old flow\"", "will not"] },
+    { "id": "condition-1", "category": "conditions", "text": "In the event that the token expires, only admins may obtain a new one.", "mustContain": ["only admins may"] },
+    { "id": "condition-2", "category": "conditions", "text": "All requests must be retried until sufficient capacity is available, except payments.", "mustContain": ["All requests must", "until", "except payments"] },
+    { "id": "plain-1", "category": "unchanged", "text": "Reminders work offline.", "mustContain": ["Reminders work offline."] }
+  ]
+}

@@ -43,6 +43,9 @@
     },
     {
       "path": "../../packages/adapter-taskmaster"
+    },
+    {
+      "path": "../../packages/normalize"
     }
   ]
 }
