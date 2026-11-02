@@ -38,6 +38,9 @@ importers:
       '@ai-plugin-toolkit/memory':
         specifier: workspace:*
         version: link:../../packages/memory
+      '@ai-plugin-toolkit/normalize':
+        specifier: workspace:*
+        version: link:../../packages/normalize
       '@ai-plugin-toolkit/provider-anthropic':
         specifier: workspace:*
         version: link:../../packages/provider-anthropic
@@ -173,6 +176,18 @@ importers:
       zod:
         specifier: 4.6.7
         version: 4.6.7
+
+  packages/normalize:
+    dependencies:
+      '@ai-plugin-toolkit/core':
+        specifier: workspace:*
+        version: link:../core
+      '@ai-plugin-toolkit/router':
+        specifier: workspace:*
+        version: link:../router
+      '@ai-plugin-toolkit/storage-sqlite':
+        specifier: workspace:*
+        version: link:../storage-sqlite
 
   packages/provider-anthropic:
     dependencies:

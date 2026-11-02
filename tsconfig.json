@@ -23,6 +23,9 @@
       "path": "packages/retrieval"
     },
     {
+      "path": "packages/normalize"
+    },
+    {
       "path": "packages/acceptance"
     },
     {

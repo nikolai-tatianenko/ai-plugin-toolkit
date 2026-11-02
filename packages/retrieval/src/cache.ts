@@ -55,7 +55,8 @@ export async function cachedContext(
   permissions: string,
 ): Promise<CacheOutcome<AssembledContext>> {
   ensureCacheValidity(store, projectId, permissions);
-  const k = key(projectId, permissions, "context", query, options, store.memory.revision(projectId));
+  const { transformStatement, ...rest } = options;
+  const k = key(projectId, permissions, "context", query, { ...rest, transform: transformStatement?.name ?? null }, store.memory.revision(projectId));
   const hit = store.cache.get(projectId, "context", k);
   if (hit !== undefined) return { value: JSON.parse(hit) as AssembledContext, cache: "hit" };
   const value = await assembleContext(store, projectId, query, options);
