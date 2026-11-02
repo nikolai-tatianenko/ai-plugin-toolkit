@@ -17,10 +17,17 @@ const examples = path.resolve(here, "../../../examples/synthetic");
 const require = createRequire(import.meta.url);
 type Playwright = typeof import("playwright");
 let playwright: Playwright | undefined;
+let skipReason = "";
 try {
   playwright = require("playwright") as Playwright;
+  const { existsSync } = await import("node:fs");
+  if (!existsSync(playwright.chromium.executablePath())) {
+    skipReason = `Chromium for Playwright is not installed (${playwright.chromium.executablePath()}); run \`pnpm --filter @ai-plugin-toolkit/inspector exec playwright install chromium\``;
+    playwright = undefined;
+  }
 } catch {
   playwright = undefined;
+  skipReason = "playwright is not installed";
 }
 const axeSource = (require("axe-core") as { source: string }).source;
 
@@ -89,6 +96,12 @@ describe("inspector server", () => {
     expect(JSON.parse(okRes.body).data.counts).toMatchObject({ facts: 5, decisions: 1, proposals: 1 });
   });
 });
+
+if (playwright === undefined) {
+  describe("inspector UI in a real browser", () => {
+    it.skip(`SKIPPED — browser tests not run: ${skipReason}`, () => {});
+  });
+}
 
 describe.skipIf(playwright === undefined)("inspector UI in a real browser (Playwright Chromium)", () => {
   async function page(width = 1200, bypassCSP = false) {
