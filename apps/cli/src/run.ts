@@ -12,6 +12,15 @@ import {
   revisionCommand,
 } from "./commands/acceptance.js";
 import { configValidateCommand } from "./commands/config.js";
+import {
+  correctCommand,
+  exportCommand,
+  forgetCommand,
+  importCommand,
+  retentionCommand,
+  reviewListCommand,
+  reviewResolveCommand,
+} from "./commands/lifecycle.js";
 import { ingestCommand } from "./commands/ingest.js";
 import { initCommand } from "./commands/init.js";
 import {
@@ -20,6 +29,8 @@ import {
   memoryListCommand,
   memoryReviewCommand,
   memoryShowCommand,
+  cacheCommand,
+  embedCommand,
   requireNumber,
   searchCommand,
 } from "./commands/memory.js";
@@ -45,7 +56,17 @@ Evidence and memory
   memory show <id>           Show a fact or decision with the exact evidence it cites
   memory confirm|reject <id> Review an extracted fact
   search <words...>          Search project memory (current records; --all for history)
-  context <words...>         Assemble a bounded, cited context (--max-chars)
+  context <words...>         Assemble a bounded, cited context (--max-chars); cached per memory revision
+  embed                      Compute missing embeddings (routing.embedding); search --semantic uses them
+  cache stats | clear        Retrieval/context/embedding cache sizes and hits
+
+Corrections and lifecycle
+  correct <topic> <choice>   Record a person's decision (--reason); supersedes the current one
+  review list | resolve <id> Possible contradictions and cross-source supersessions
+  forget <source-id...>      Delete a source and everything derived from it (--yes)
+  export --out <file>        Portable JSON of memory and acceptance state
+  import <file>              Load an export into an empty project
+  retention show | apply     Apply retention.sourceMaxAgeDays (--yes)
 
 Artifacts
   generate [types...]        Write FACTS, VISION, PLAN, STATUS, ACCEPTANCE and decision records
@@ -73,7 +94,8 @@ Global options
   -h, --help     Show help;  -v, --version  Print the version
 
 Command options
-  init:      --project-id <id> --name <name> --dry-run --provider anthropic|fixture --fixture <path>
+  init:      --project-id <id> --name <name> --dry-run --provider anthropic|ollama|fixture --fixture <path>
+             --model <name> --embeddings hashing|ollama
              --tasks beads --allow-task-writes
   ingest:    --type <conversation|document|tool-output> --title <title> --dry-run
   extract:   --source <id> --force
@@ -115,6 +137,13 @@ const OPTIONS = {
   ref: { type: "string" },
   reason: { type: "string" },
   "require-ready": { type: "boolean", default: false },
+  action: { type: "string" },
+  keep: { type: "string" },
+  yes: { type: "boolean", default: false },
+  out: { type: "string" },
+  semantic: { type: "boolean", default: false },
+  model: { type: "string" },
+  embeddings: { type: "string" },
 } as const;
 
 type OptionName = keyof typeof OPTIONS;
@@ -150,7 +179,7 @@ const COMMANDS: Command[] = [
   {
     words: ["init"],
     args: 0,
-    options: ["project-id", "name", "dry-run", "provider", "fixture", "tasks", "allow-task-writes"],
+    options: ["project-id", "name", "dry-run", "provider", "fixture", "tasks", "allow-task-writes", "model", "embeddings"],
     usage: "loom init [--project-id <id>] [--name <name>] [--provider anthropic|fixture] [--tasks beads]",
     run: (inv) =>
       ok(
@@ -161,6 +190,8 @@ const COMMANDS: Command[] = [
           dryRun: inv.values["dry-run"] === true,
           provider: inv.values.provider,
           fixture: inv.values.fixture,
+          model: inv.values.model,
+          embeddings: inv.values.embeddings,
           tasks: inv.values.tasks,
           allowTaskWrites: inv.values["allow-task-writes"] === true,
         }),
@@ -203,9 +234,10 @@ const COMMANDS: Command[] = [
   {
     words: ["search"],
     args: [1, 100],
-    options: ["all", "limit"],
-    usage: "loom search <words...> [--all] [--limit <n>]",
-    run: (inv) => ok(searchCommand({ ...base(inv), query: inv.args.join(" "), all: inv.values.all === true, limit: requireNumber(inv.values.limit, "limit", 20, 1, 200) })),
+    options: ["all", "limit", "semantic"],
+    usage: "loom search <words...> [--all] [--limit <n>] [--semantic]",
+    run: (inv) =>
+      ok(searchCommand({ ...base(inv), query: inv.args.join(" "), all: inv.values.all === true, limit: requireNumber(inv.values.limit, "limit", 20, 1, 200), semantic: inv.values.semantic === true })),
   },
   {
     words: ["context"],
@@ -214,6 +246,9 @@ const COMMANDS: Command[] = [
     usage: "loom context <words...> [--max-chars <n>]",
     run: (inv) => ok(contextCommand({ ...base(inv), query: inv.args.join(" "), maxChars: requireNumber(inv.values["max-chars"], "max-chars", 8_000, 200, 1_000_000) })),
   },
+  { words: ["embed"], args: 0, options: [], usage: "loom embed", run: (inv) => ok(embedCommand(base(inv))) },
+  { words: ["cache", "stats"], args: 0, options: [], usage: "loom cache stats", run: (inv) => ok(cacheCommand({ ...base(inv), clear: false })) },
+  { words: ["cache", "clear"], args: 0, options: [], usage: "loom cache clear", run: (inv) => ok(cacheCommand({ ...base(inv), clear: true })) },
   {
     words: ["generate"],
     args: [0, 10],
@@ -223,6 +258,38 @@ const COMMANDS: Command[] = [
       const result = await generateCommand({ ...base(inv), types: inv.args, force: inv.values.force === true, dryRun: inv.values["dry-run"] === true });
       return { result, ...(Number(result.data.conflicts) > 0 ? { exit: EXIT.failure } : {}) };
     },
+  },
+  {
+    words: ["correct"],
+    args: [2, 100],
+    options: ["reason"],
+    usage: "loom correct <topic> <choice...> --reason <why>",
+    run: (inv) => ok(correctCommand({ ...base(inv), topic: inv.args[0]!, choice: inv.args.slice(1).join(" "), reason: inv.values.reason })),
+  },
+  { words: ["review", "list"], args: 0, options: ["all"], usage: "loom review list [--all]", run: (inv) => ok(reviewListCommand({ ...base(inv), all: inv.values.all === true })) },
+  {
+    words: ["review", "resolve"],
+    args: 1,
+    options: ["action", "keep"],
+    usage: "loom review resolve <id> --action accept|revert|dismiss | --keep <record-id>",
+    run: (inv) => ok(reviewResolveCommand({ ...base(inv), id: inv.args[0]!, action: inv.values.action, keep: inv.values.keep })),
+  },
+  {
+    words: ["forget"],
+    args: [1, 1_000],
+    options: ["yes"],
+    usage: "loom forget <source-id...> --yes",
+    run: (inv) => ok(forgetCommand({ ...base(inv), sources: inv.args, yes: inv.values.yes === true })),
+  },
+  { words: ["export"], args: 0, options: ["out"], usage: "loom export --out <file.json>", run: (inv) => ok(exportCommand({ ...base(inv), out: inv.values.out, cwd: inv.cwd })) },
+  { words: ["import"], args: 1, options: [], usage: "loom import <export.json>", run: (inv) => ok(importCommand({ ...base(inv), file: inv.args[0]!, cwd: inv.cwd })) },
+  { words: ["retention", "show"], args: 0, options: [], usage: "loom retention show", run: (inv) => ok(retentionCommand({ ...base(inv), apply: false, yes: false })) },
+  {
+    words: ["retention", "apply"],
+    args: 0,
+    options: ["yes"],
+    usage: "loom retention apply --yes",
+    run: (inv) => ok(retentionCommand({ ...base(inv), apply: true, yes: inv.values.yes === true })),
   },
   { words: ["assess"], args: 0, options: ["pack"], usage: "loom assess --pack <id>", run: (inv) => ok(assessCommand({ ...base(inv), pack: inv.values.pack })) },
   {

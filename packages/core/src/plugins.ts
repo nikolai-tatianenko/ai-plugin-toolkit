@@ -114,10 +114,18 @@ export class ProviderError extends LoomError {
   }
 }
 
+export interface EmbeddingResult {
+  vectors: number[][];
+  model: string;
+  usage: Usage;
+}
+
 export interface ProviderAdapter {
   readonly manifest: ProviderManifest;
-  complete(request: CompletionRequest, options: { signal: AbortSignal }): Promise<CompletionResult>;
-  embed?(texts: readonly string[], options: { signal: AbortSignal }): Promise<number[][]>;
+  /** Required when the manifest declares `complete`. */
+  complete?(request: CompletionRequest, options: { signal: AbortSignal }): Promise<CompletionResult>;
+  /** Required when the manifest declares `embeddings`. */
+  embed?(texts: readonly string[], options: { signal: AbortSignal; model?: string }): Promise<EmbeddingResult>;
 }
 
 // ---- Task adapter contract ---------------------------------------------------
@@ -167,6 +175,9 @@ export function defineProvider<P extends ProviderAdapter>(provider: P): P {
   const manifest = parseWith(ProviderManifestSchema, provider.manifest, `provider manifest`);
   if (manifest.capabilities.includes("embeddings") && typeof provider.embed !== "function") {
     throw new UnsupportedCapabilityError(manifest.name, "embeddings", "declared but not implemented");
+  }
+  if (manifest.capabilities.includes("complete") && typeof provider.complete !== "function") {
+    throw new UnsupportedCapabilityError(manifest.name, "complete", "declared but not implemented");
   }
   return provider;
 }

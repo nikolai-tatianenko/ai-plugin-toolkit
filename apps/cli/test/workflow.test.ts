@@ -159,6 +159,43 @@ describe("workflow 3: change set → preview → publish → rerun", () => {
   }, 300_000);
 });
 
+describe("workflow 4: correct a decision → supersede → regenerate", () => {
+  it("A06: the corrected decision appears in regenerated summaries; history is kept", async () => {
+    await prepared();
+    await loom(["extract"]);
+    await loom(["generate"]);
+    const corrected = await loom(["correct", "storage", "SQLite", "with", "iCloud", "sync", "--reason", "users asked for backup", "--json"]);
+    expect(corrected.code).toBe(EXIT.ok);
+    const generated = (await loom(["generate", "--json"])).json().data.artifacts;
+    expect(generated.find((a: { name: string }) => a.name === "VISION.md").status).toBe("updated");
+    const vision = await readFile(path.join(workDir, "loom-docs/VISION.md"), "utf8");
+    expect(vision).toMatch(/\*\*storage:\*\* SQLite with iCloud sync — confirmed by pat/);
+    expect(vision).not.toMatch(/On-device SQLite — confirmed/);
+    const history = (await loom(["memory", "list", "--kind", "decisions", "--all", "--json"])).json().data.decisions;
+    expect(history.find((d: { choice: string }) => d.choice === "On-device SQLite").status).toBe("superseded");
+  });
+});
+
+describe("workflow 5: forget scoped evidence", () => {
+  it("A21: forgetting removes facts, search hits, decision records and generated text, and flags old exports", async () => {
+    await prepared();
+    await loom(["extract"]);
+    await loom(["generate"]);
+    expect((await loom(["export", "--out", "backup.json"])).code).toBe(EXIT.ok);
+    const sourceId = (await loom(["sources", "list", "--json"])).json().data.sources[0].id;
+    expect((await loom(["forget", sourceId])).code).toBe(EXIT.usage); // --yes required
+    const forgot = (await loom(["forget", sourceId, "--yes", "--json"])).json().data;
+    expect(forgot.results[0].deletedRecords).toHaveLength(7);
+    expect(forgot.removedFiles).toHaveLength(2);
+    expect(forgot.stillPresent).toEqual(["backup.json"]);
+    expect((await loom(["memory", "list", "--all", "--json"])).json().data).toMatchObject({ facts: [], decisions: [] });
+    expect((await loom(["search", "reminders", "offline", "--json"])).json().data.hits).toEqual([]);
+    for (const name of ["FACTS.md", "VISION.md", "PLAN.md", "STATUS.md"]) {
+      expect(await readFile(path.join(workDir, "loom-docs", name), "utf8")).not.toMatch(/Reminders must work offline|SQLite/);
+    }
+  });
+});
+
 describe("built binary", () => {
   it("runs the documented demo as a real process", async () => {
     const cli = (args: string[]) => execFileAsync(process.execPath, [binPath, ...args], { cwd: workDir, env: { ...process.env, LOOM_ACTOR: "ci" } });
@@ -172,5 +209,26 @@ describe("built binary", () => {
     await cli(["generate"]);
     const plan = await readFile(path.join(workDir, "loom-docs/PLAN.md"), "utf8");
     expect(plan).toMatch(/purchases\.restore`: Not applicable/);
+  });
+});
+
+describe("caches and local embeddings (CL-015)", () => {
+  it("caches search per memory revision and supports semantic search with the local hashing embedder", async () => {
+    expect((await loom(["init", "--project-id", "habit", "--provider", "fixture", "--fixture", "recorded.json", "--embeddings", "hashing"])).code).toBe(EXIT.ok);
+    await loom(["ingest", "kickoff.json"]);
+    await loom(["extract"]);
+    expect((await loom(["search", "offline", "--json"])).json().data.cache).toBe("miss");
+    expect((await loom(["search", "offline", "--json"])).json().data.cache).toBe("hit");
+    await loom(["memory", "confirm", (await loom(["memory", "list", "--kind", "facts", "--json"])).json().data.facts[0].id]);
+    expect((await loom(["search", "offline", "--json"])).json().data.cache).toBe("miss");
+
+    expect((await loom(["embed", "--json"])).json().data).toMatchObject({ embedded: 7, reused: 0 });
+    expect((await loom(["embed", "--json"])).json().data).toMatchObject({ embedded: 0, reused: 7 });
+    const hits = (await loom(["search", "reminders", "offline", "--semantic", "--json"])).json().data.hits;
+    expect(hits[0].text).toBe("Reminders must work offline.");
+    const stats = (await loom(["cache", "stats", "--json"])).json().data.stats;
+    expect(stats.map((s: { namespace: string }) => s.namespace)).toContain("retrieval");
+    await loom(["generate", "status"]);
+    expect(await readFile(path.join(workDir, "loom-docs/STATUS.md"), "utf8")).toMatch(/- embedding: \d+ call\(s\).*cost \$0\.0000/);
   });
 });

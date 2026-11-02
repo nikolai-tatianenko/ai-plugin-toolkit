@@ -7,7 +7,7 @@ export const CONFIG_FILENAME = "loom.config.json";
 export const CONFIG_VERSION = 1;
 
 /** Routing policy names known to v0.1. Unknown policies are rejected rather than ignored. */
-export const ROUTING_TASKS = ["extraction", "summary", "planning", "review"] as const;
+export const ROUTING_TASKS = ["extraction", "summary", "planning", "review", "embedding", "normalization"] as const;
 export type RoutingTask = (typeof ROUTING_TASKS)[number];
 
 const ProviderNameSchema = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, "Provider name must be a lowercase slug");
@@ -25,6 +25,8 @@ export const ProviderConfigSchema = z.strictObject({
   model: z.string().min(1).optional(),
   apiKeyEnv: EnvVarNameSchema.optional(),
   baseUrl: z.url().optional(),
+  /** Embedding model for adapters that support embeddings (e.g. Ollama "nomic-embed-text"). */
+  embeddingModel: z.string().min(1).optional(),
   /** `fixture` adapter only: recorded responses, relative to the project directory. */
   fixture: z.string().min(1).optional(),
 });
@@ -84,6 +86,12 @@ export const LoomConfigSchema = z
       })
       .default({ dir: "loom-docs" }),
     tasks: TaskSyncConfigSchema.optional(),
+    retention: z
+      .strictObject({
+        /** Sources older than this (by ingest time) are forgotten by `loom retention apply`. */
+        sourceMaxAgeDays: z.int().min(1).max(36_500).optional(),
+      })
+      .default({}),
   })
   .superRefine((config, ctx) => {
     for (const [task, policy] of Object.entries(config.routing)) {

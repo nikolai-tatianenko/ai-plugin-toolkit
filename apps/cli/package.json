@@ -29,6 +29,7 @@
     "@ai-plugin-toolkit/acceptance": "workspace:*",
     "@ai-plugin-toolkit/artifacts": "workspace:*",
     "@ai-plugin-toolkit/task-sync": "workspace:*",
-    "@ai-plugin-toolkit/adapter-beads": "workspace:*"
+    "@ai-plugin-toolkit/adapter-beads": "workspace:*",
+    "@ai-plugin-toolkit/provider-ollama": "workspace:*"
   }
 }

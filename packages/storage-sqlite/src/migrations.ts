@@ -284,6 +284,74 @@ export const MIGRATIONS: readonly Migration[] = [
       ) STRICT;
     `,
   },
+  {
+    version: 3,
+    name: "review-cache-embeddings-two-way-sync",
+    sql: `
+      -- Conflict review (CL-013): possible contradictions waiting for a person.
+      CREATE TABLE review_items (
+        id          TEXT PRIMARY KEY,
+        project_id  TEXT NOT NULL REFERENCES projects(id),
+        kind        TEXT NOT NULL,
+        record_ids  TEXT NOT NULL,
+        detail      TEXT NOT NULL,
+        status      TEXT NOT NULL CHECK (status IN ('open', 'resolved', 'dismissed')),
+        resolution  TEXT,
+        resolved_by TEXT,
+        created_at  TEXT NOT NULL,
+        resolved_at TEXT,
+        UNIQUE (project_id, kind, record_ids)
+      ) STRICT;
+
+      -- Caches (CL-015). Keys always include the project; values never cross projects.
+      CREATE TABLE cache_entries (
+        project_id  TEXT NOT NULL REFERENCES projects(id),
+        namespace   TEXT NOT NULL,
+        key         TEXT NOT NULL,
+        value       TEXT NOT NULL,
+        bytes       INTEGER NOT NULL,
+        hits        INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT NOT NULL,
+        last_hit_at TEXT,
+        PRIMARY KEY (project_id, namespace, key)
+      ) STRICT;
+
+      CREATE TABLE embeddings (
+        project_id   TEXT NOT NULL REFERENCES projects(id),
+        record_id    TEXT NOT NULL,
+        model        TEXT NOT NULL,
+        content_hash TEXT NOT NULL,
+        vector       TEXT NOT NULL,
+        created_at   TEXT NOT NULL,
+        PRIMARY KEY (project_id, record_id, model)
+      ) STRICT;
+
+      -- Transform outputs (CL-016), keyed by content hash and transformer version.
+      CREATE TABLE transforms (
+        project_id   TEXT NOT NULL REFERENCES projects(id),
+        content_hash TEXT NOT NULL,
+        transformer  TEXT NOT NULL,
+        version      TEXT NOT NULL,
+        status       TEXT NOT NULL CHECK (status IN ('transformed', 'fallback')),
+        output       TEXT NOT NULL,
+        report       TEXT NOT NULL,
+        created_at   TEXT NOT NULL,
+        PRIMARY KEY (project_id, content_hash, transformer, version)
+      ) STRICT;
+
+      -- Pack provenance (CL-018): dispositions remember the criterion definition they were made against.
+      ALTER TABLE pack_activations ADD COLUMN source TEXT NOT NULL DEFAULT 'builtin';
+      ALTER TABLE criterion_dispositions ADD COLUMN pack_version TEXT;
+      ALTER TABLE criterion_dispositions ADD COLUMN criterion_hash TEXT;
+      ALTER TABLE evidence ADD COLUMN importer TEXT;
+      ALTER TABLE evidence ADD COLUMN import_ref TEXT;
+
+      -- Two-way sync (CL-019): remote edits kept for resolution.
+      ALTER TABLE tasks ADD COLUMN remote_title TEXT;
+      ALTER TABLE tasks ADD COLUMN remote_description TEXT;
+      ALTER TABLE tasks ADD COLUMN resolution TEXT CHECK (resolution IS NULL OR resolution IN ('keep-local', 'keep-remote'));
+    `,
+  },
 ];
 
 const BOOKKEEPING = `

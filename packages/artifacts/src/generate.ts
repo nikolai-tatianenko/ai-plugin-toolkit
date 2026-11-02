@@ -53,6 +53,8 @@ export async function buildSnapshot(store: LoomStore, projectId: string, project
       rejected: store.memory.listRejected(projectId).length,
     },
     sync: lastSync === undefined ? undefined : { adapter: lastSync.adapter, lastStatus: lastSync.status, mapped: store.tasks.mappings(projectId, lastSync.adapter).length },
+    routing: store.routing.summary(projectId),
+    review: store.memory.reviewItems(projectId).map((r) => ({ id: r.id, kind: r.kind, detail: r.detail })),
     decisionEvidence,
   };
 }

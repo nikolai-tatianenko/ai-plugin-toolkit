@@ -4,6 +4,7 @@ import {
   isLoomError,
   type CompletionRequest,
   type CompletionResult,
+  type ProviderCapability,
   type LoomConfig,
   type ProviderAdapter,
   type ProviderConfig,
@@ -94,6 +95,34 @@ export class Router {
     request: Omit<CompletionRequest, "model">,
     routeOptions: RouteOptions<T> = {},
   ): Promise<RouteResult<T>> {
+    const needs: ProviderCapability[] = request.responseFormat === "json" ? ["complete", "json-output"] : ["complete"];
+    return this.route(task, needs, (adapter, model, policy, signal) => this.attempt(adapter, { ...request, model }, policy, signal), routeOptions);
+  }
+
+  /**
+   * Embed texts through the task's policy (same restrictions, timeouts, retries and
+   * traces as completions). Embedding is background maintenance, so its cost is traced
+   * under its own routing task and counted in project totals.
+   */
+  async embed(task: RoutingTask, texts: readonly string[], routeOptions: { signal?: AbortSignal } = {}): Promise<RouteResult<number[][]>> {
+    return this.route(
+      task,
+      ["embeddings"],
+      async (adapter, model, policy, signal) => {
+        const result = await this.bounded(policy, signal, (s) => adapter.embed!(texts, { signal: s, ...(model ? { model } : {}) }));
+        if (result.vectors.length !== texts.length) throw new ProviderError("invalid-output", `expected ${texts.length} vectors, got ${result.vectors.length}`);
+        return { text: "", model: result.model, usage: result.usage, vectors: result.vectors };
+      },
+      { ...routeOptions, validate: (r) => (r as CompletionResult & { vectors: number[][] }).vectors },
+    );
+  }
+
+  private async route<T>(
+    task: RoutingTask,
+    needs: readonly ProviderCapability[],
+    invoke: (adapter: ProviderAdapter, model: string, policy: RoutingPolicy, signal: AbortSignal | undefined) => Promise<CompletionResult>,
+    routeOptions: RouteOptions<T>,
+  ): Promise<RouteResult<T>> {
     const policy = this.policy(task);
     const { config } = this.options;
     const sleep = this.options.sleep ?? defaultSleep;
@@ -149,8 +178,9 @@ export class Router {
         skip("policy", `adapter "${adapter.manifest.name}" reports a remote location; restricted project refuses it`);
         continue;
       }
-      if (request.responseFormat === "json" && !adapter.manifest.capabilities.includes("json-output")) {
-        skip("capability", `adapter "${adapter.manifest.name}" does not declare json-output`);
+      const missing = needs.filter((c) => !adapter.manifest.capabilities.includes(c));
+      if (missing.length > 0) {
+        skip("capability", `adapter "${adapter.manifest.name}" does not declare ${missing.join(", ")}`);
         continue;
       }
 
@@ -168,7 +198,7 @@ export class Router {
         attemptsMade++;
         const started = now();
         try {
-          const result = await this.attempt(adapter, { ...request, model: model ?? "" }, policy, routeOptions.signal);
+          const result = await invoke(adapter, model ?? "", policy, routeOptions.signal);
           addUsage(result.usage);
           let value: T;
           try {
@@ -240,13 +270,17 @@ export class Router {
     return adapter;
   }
 
-  /** One bounded attempt: the timeout fires even if an adapter ignores its abort signal. */
-  private async attempt(
-    adapter: ProviderAdapter,
-    request: CompletionRequest,
-    policy: RoutingPolicy,
-    callerSignal: AbortSignal | undefined,
-  ): Promise<CompletionResult> {
+  /** One bounded completion attempt. */
+  private attempt(adapter: ProviderAdapter, request: CompletionRequest, policy: RoutingPolicy, callerSignal: AbortSignal | undefined): Promise<CompletionResult> {
+    const withBudget =
+      policy.maxOutputTokens === undefined
+        ? request
+        : { ...request, maxOutputTokens: Math.min(request.maxOutputTokens ?? policy.maxOutputTokens, policy.maxOutputTokens) };
+    return this.bounded(policy, callerSignal, (signal) => adapter.complete!(withBudget, { signal }));
+  }
+
+  /** Run one call with a hard timeout that fires even if the adapter ignores its abort signal. */
+  private async bounded<R>(policy: RoutingPolicy, callerSignal: AbortSignal | undefined, call: (signal: AbortSignal) => Promise<R>): Promise<R> {
     const controller = new AbortController();
     const onCallerAbort = () => controller.abort(callerSignal?.reason);
     callerSignal?.addEventListener("abort", onCallerAbort, { once: true });
@@ -258,11 +292,7 @@ export class Router {
       }, policy.timeoutMs);
     });
     try {
-      const withBudget =
-        policy.maxOutputTokens === undefined
-          ? request
-          : { ...request, maxOutputTokens: Math.min(request.maxOutputTokens ?? policy.maxOutputTokens, policy.maxOutputTokens) };
-      const pending = adapter.complete(withBudget, { signal: controller.signal });
+      const pending = call(controller.signal);
       // If the timeout wins, the adapter may still reject later (e.g. after abort); never leave that unhandled.
       pending.catch(() => {});
       return await Promise.race([pending, timeout]);

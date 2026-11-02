@@ -38,6 +38,9 @@ importers:
       '@ai-plugin-toolkit/provider-anthropic':
         specifier: workspace:*
         version: link:../../packages/provider-anthropic
+      '@ai-plugin-toolkit/provider-ollama':
+        specifier: workspace:*
+        version: link:../../packages/provider-ollama
       '@ai-plugin-toolkit/retrieval':
         specifier: workspace:*
         version: link:../../packages/retrieval
@@ -142,6 +145,9 @@ importers:
       '@ai-plugin-toolkit/storage-sqlite':
         specifier: workspace:*
         version: link:../storage-sqlite
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
 
   packages/provider-anthropic:
     dependencies:
@@ -151,6 +157,12 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 1.3.0
         version: 1.3.0(zod@4.6.7)
+
+  packages/provider-ollama:
+    dependencies:
+      '@ai-plugin-toolkit/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/retrieval:
     dependencies:

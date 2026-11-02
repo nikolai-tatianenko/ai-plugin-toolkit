@@ -1,6 +1,6 @@
 import { LoomError, isIdOf } from "@ai-plugin-toolkit/core";
 import { describeRecord, extractAll, extractSource, type ExtractResult } from "@ai-plugin-toolkit/memory";
-import { assembleContext, search } from "@ai-plugin-toolkit/retrieval";
+import { cachedContext, cachedSearch, ensureEmbeddings, hybridSearch } from "@ai-plugin-toolkit/retrieval";
 import { withProject } from "../context.js";
 import { UsageError, type CommandResult } from "../io.js";
 
@@ -89,12 +89,22 @@ export async function memoryReviewCommand(options: Base & { id: string; status: 
   });
 }
 
-export async function searchCommand(options: Base & { query: string; all: boolean; limit: number }): Promise<CommandResult> {
+export async function searchCommand(options: Base & { query: string; all: boolean; limit: number; semantic: boolean }): Promise<CommandResult> {
   if (options.query.trim() === "") throw new UsageError("Usage: loom search <words...>");
   return withProject(options.rootDir, options, async (ctx) => {
-    const hits = search(ctx.store, ctx.projectId, options.query, { limit: options.limit, includeHistory: options.all });
+    let hits;
+    let cache: string = "off";
+    if (options.semantic) {
+      const embedder = ctx.embedder();
+      if (embedder === undefined) throw new LoomError("CONFIG_INVALID", "--semantic needs routing.embedding in loom.config.json (e.g. the local hashing or ollama adapter).");
+      hits = await hybridSearch(ctx.store, ctx.projectId, options.query, embedder, { limit: options.limit, includeHistory: options.all });
+    } else {
+      const outcome = cachedSearch(ctx.store, ctx.projectId, options.query, { limit: options.limit, includeHistory: options.all }, ctx.permissions);
+      hits = outcome.value;
+      cache = outcome.cache;
+    }
     return {
-      data: { projectId: ctx.projectId, query: options.query, hits },
+      data: { projectId: ctx.projectId, query: options.query, hits, cache },
       lines: hits.length === 0 ? ["No matches."] : hits.map((h) => `  ${h.id}  [${h.kind}${h.kind === "source" ? "" : `, ${h.status}`}] ${h.text}`),
     };
   });
@@ -103,10 +113,33 @@ export async function searchCommand(options: Base & { query: string; all: boolea
 export async function contextCommand(options: Base & { query: string; maxChars: number }): Promise<CommandResult> {
   if (options.query.trim() === "") throw new UsageError("Usage: loom context <words...> [--max-chars <n>]");
   return withProject(options.rootDir, options, async (ctx) => {
-    const context = await assembleContext(ctx.store, ctx.projectId, options.query, { maxChars: options.maxChars });
+    const { value: context, cache } = await cachedContext(ctx.store, ctx.projectId, options.query, { maxChars: options.maxChars }, ctx.permissions);
     return {
-      data: context as unknown as Record<string, unknown>,
-      lines: [context.text.trimEnd(), "", `(${context.usedChars}/${context.maxChars} chars; ${context.included.length} included, ${context.omitted.length} omitted)`],
+      data: { ...(context as unknown as Record<string, unknown>), cache },
+      lines: [context.text.trimEnd(), "", `(${context.usedChars}/${context.maxChars} chars; ${context.included.length} included, ${context.omitted.length} omitted; cache ${cache})`],
+    };
+  });
+}
+
+export async function embedCommand(options: Base): Promise<CommandResult> {
+  return withProject(options.rootDir, options, async (ctx) => {
+    const embedder = ctx.embedder();
+    if (embedder === undefined) throw new LoomError("CONFIG_INVALID", "No routing.embedding policy configured.");
+    const result = await ensureEmbeddings(ctx.store, ctx.projectId, embedder.embed, embedder.model);
+    return { data: { model: embedder.model, ...result }, lines: [`Embeddings (${embedder.model}): ${result.embedded} computed, ${result.reused} reused.`] };
+  });
+}
+
+export async function cacheCommand(options: Base & { clear: boolean }): Promise<CommandResult> {
+  return withProject(options.rootDir, options, async (ctx) => {
+    const removed = options.clear ? ctx.store.cache.clear(ctx.projectId) + ctx.store.cache.clearTransforms(ctx.projectId) : 0;
+    const stats = ctx.store.cache.stats(ctx.projectId);
+    return {
+      data: { stats, removed },
+      lines: [
+        ...(options.clear ? [`Cleared ${removed} cache entr(ies).`] : []),
+        ...(stats.length === 0 ? ["Caches are empty."] : stats.map((s) => `  ${s.namespace.padEnd(10)} ${s.entries} entries, ${s.bytes} bytes, ${s.hits} hits`)),
+      ],
     };
   });
 }

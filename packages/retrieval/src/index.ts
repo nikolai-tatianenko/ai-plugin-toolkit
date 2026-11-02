@@ -144,3 +144,4 @@ export async function assembleContext(
   }
   return { text, maxChars, usedChars: text.length, included, omitted, memoryRevision: store.memory.revision(projectId) };
 }
+export * from "./cache.js";
