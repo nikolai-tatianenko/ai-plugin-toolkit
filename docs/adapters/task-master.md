@@ -1,6 +1,6 @@
 # Task Master compatibility notes (CL-009)
 
-Status: **investigated, not implemented.** The second adapter is CL-014 (v0.2).
+Status: **adapter implemented (CL-014); real-upstream integration not yet run.**
 
 | Item | Value |
 | --- | --- |
@@ -28,6 +28,14 @@ Sources read: [README](https://github.com/eyaltoledano/claude-task-master/blob/t
 
 **Beads was chosen as the first adapter (CL-011)** because it documents `--json` output for every command used, has an `external_ref` field for idempotency, has native dependency edges, an `updated_at` revision, and an MIT license. Task Master's non-AI update path and machine-readable reads need a deeper look (or the MCP interface) before an adapter can meet the same contract without inventing capabilities.
 
-## Real test strategy (for CL-014)
+## Adapter (CL-014)
+
+- Writes go through the CLI with manual options only: `add-task --title --description --details`, `add-dependency --id --depends-on`, `init --yes --skip-install --no-aliases --no-git`. `--prompt` is never used, so Task Master never calls an AI provider on Loom's behalf.
+- Reads parse `.taskmaster/tasks/tasks.json` (tagged format, tag configurable; legacy format accepted). The idempotency key is stored as a `loom-idempotency-key:` line in `details`. The revision is a hash of title, description, details, status and dependencies.
+- **Declared capabilities:** readTasks, createTask, linkDependency. **Not supported:** updateTask (no non-AI update upstream) and readChanges. Sync reports each local update as `UNSUPPORTED_CAPABILITY`, and `tasks resolve --keep local` is unavailable.
+- Version gate: 0.43.x (`LOOM_TASKMASTER_ALLOW_UNTESTED=1` to override).
+- Tests: unit tests and the shared sync scenarios against a fake CLI that edits `tasks.json` the documented way (shapes only). The real-binary suite `taskmaster.integration.test.ts` runs when `task-master` 0.43.x is installed (`LOOM_TASKMASTER_BIN`); **not yet run**.
+
+## Real test strategy
 
 Install the pinned `task-master-ai` into a temporary directory, initialize a disposable project without AI providers configured, and run the shared scenarios in `packages/task-sync/test/scenarios.ts` against it. Any operation that would need an AI call is declared unsupported (`UNSUPPORTED_CAPABILITY`).

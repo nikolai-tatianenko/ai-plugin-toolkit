@@ -110,7 +110,7 @@ describe("loom config validate", () => {
     const unset = await loom(["config", "validate", "--json"]);
     expect(unset.json().data.warnings[0].code).toBe("CREDENTIAL_ENV_UNSET");
 
-    const set = await loom(["config", "validate", "--json"], { LOOM_TEST_KEY: "sk-ant-api03-secretsecretsecretsecret" });
+    const set = await loom(["config", "validate", "--json"], { LOOM_TEST_KEY: "sk-ant-api03-secretsecretsecretsecret" }); // secret-scan: synthetic
     expect(set.json().data.warnings).toEqual([]);
     expect(set.stdout).not.toContain("secretsecret");
   });

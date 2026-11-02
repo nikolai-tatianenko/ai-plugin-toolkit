@@ -1,6 +1,6 @@
 # Implementation tickets
 
-Status reflects recorded evidence; **implemented does not mean verified or release-ready**. `blocked` means the code exists but the ticket's acceptance criterion cannot be met yet. Dependency IDs establish execution order; milestones describe scope rather than guaranteed dates. Remaining work is summarized in [plan §14](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md#14-remaining-work-as-of-2026-11-01). See the [full plan](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md) and [test plan](../test-plan/CONTEXT-LOOM-ACCEPTANCE.md).
+Status reflects recorded evidence; **implemented does not mean verified or release-ready**. `blocked` means the code exists but the ticket's acceptance criterion cannot be met yet. Dependency IDs establish execution order; milestones describe scope rather than guaranteed dates. Remaining work is summarized in [plan §14](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md#14-remaining-work-as-of-2026-11-02). See the [full plan](../plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md) and [test plan](../test-plan/CONTEXT-LOOM-ACCEPTANCE.md).
 
 | ID | Work | Milestone | Depends on | Status |
 | --- | --- | --- | --- | --- |
@@ -16,13 +16,13 @@ Status reflects recorded evidence; **implemented does not mean verified or relea
 | [CL-010](CL-010.md) | Task change sets and synchronization core | v0.1 | 006, 008, 009 | implemented |
 | [CL-011](CL-011.md) | First real task adapter | v0.1 | 009, 010 | blocked (real Beads run pending) |
 | [CL-012](CL-012.md) | CLI demo and release documentation | v0.1 | 005, 006, 008, 011 | blocked (on CL-011) |
-| [CL-013](CL-013.md) | Corrections conflicts deletion and retention | v0.2 | 004, 005, 006 | planned |
-| [CL-014](CL-014.md) | Second real task adapter | v0.2 | 009, 010, 011 | planned |
-| [CL-015](CL-015.md) | Cache services and optional embeddings | v0.3 | 005, 013 | planned |
-| [CL-016](CL-016.md) | Controlled-English normalization experiment | v0.3 | 003, 005 | planned |
-| [CL-017](CL-017.md) | MCP interface | v0.3 | 008, 010, 013 | planned |
-| [CL-018](CL-018.md) | Additional topic packs and evidence importers | v0.3 | 007, 008 | planned |
-| [CL-019](CL-019.md) | Two-way sync and recovery hardening | v0.4 | 013, 014 | planned |
-| [CL-020](CL-020.md) | React memory and delivery inspector | v0.4 | 008, 013 | planned |
+| [CL-013](CL-013.md) | Corrections conflicts deletion and retention | v0.2 | 004, 005, 006 | implemented |
+| [CL-014](CL-014.md) | Second real task adapter | v0.2 | 009, 010, 011 | blocked (real Task Master run pending) |
+| [CL-015](CL-015.md) | Cache services and optional embeddings | v0.3 | 005, 013 | implemented |
+| [CL-016](CL-016.md) | Controlled-English normalization experiment | v0.3 | 003, 005 | implemented |
+| [CL-017](CL-017.md) | MCP interface | v0.3 | 008, 010, 013 | implemented |
+| [CL-018](CL-018.md) | Additional topic packs and evidence importers | v0.3 | 007, 008 | implemented |
+| [CL-019](CL-019.md) | Two-way sync and recovery hardening | v0.4 | 013, 014 | implemented |
+| [CL-020](CL-020.md) | React memory and delivery inspector | v0.4 | 008, 013 | implemented |
 | [CL-021](CL-021.md) | Reproducible evaluation and architecture records | v0.1 onward | 004, 005, 008 | in-progress |
-| [CL-022](CL-022.md) | Open-source publication gate | release | 012, 021 | planned |
+| [CL-022](CL-022.md) | Open-source publication gate | release | 012, 021 | blocked (license decision, upstream runs, publication) |
