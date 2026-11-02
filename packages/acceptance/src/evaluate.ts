@@ -8,7 +8,7 @@ import {
   type Criterion,
 } from "@ai-plugin-toolkit/core";
 import type { LoomStore, StoredAnswer, StoredEvidence } from "@ai-plugin-toolkit/storage-sqlite";
-import { questionHash, type Condition, type PackCriterion, type PackQuestion, type TopicPack } from "./pack.js";
+import { criterionHash, questionHash, type Condition, type PackCriterion, type PackQuestion, type TopicPack } from "./pack.js";
 
 export const REVISION_KEY = "build.revision";
 
@@ -176,7 +176,14 @@ export function evaluatePack(store: LoomStore, projectId: string, pack: TopicPac
       applicability === "applicable"
         ? verificationOf(pc, evidence.filter((e) => e.criterionId === id), revision, notes)
         : { verification: "not-checked" as const, evidenceIds: [] };
-    const disposition = dispositions.get(id);
+    const stored = dispositions.get(id);
+    // A waiver or acceptance recorded against a different criterion definition is not carried over
+    // silently (CL-018): it stays on record but no longer applies until a person re-confirms it.
+    const outdated = stored?.criterionHash !== undefined && stored.criterionHash !== criterionHash(pc);
+    if (stored !== undefined && outdated) {
+      notes.push(`${stored.disposition} by ${stored.actor} was recorded against ${pack.id}@${stored.packVersion ?? "?"}; the criterion changed since, so it needs to be re-confirmed`);
+    }
+    const disposition = outdated ? undefined : stored;
     const base = {
       id,
       projectId,

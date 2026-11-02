@@ -15,7 +15,10 @@ import {
   type Evaluation,
   type QuestionMode,
 } from "@ai-plugin-toolkit/acceptance";
-import { LoomError } from "@ai-plugin-toolkit/core";
+import path from "node:path";
+import { readFile } from "node:fs/promises";
+import { IMPORT_FORMATS, importEvidence, loadPackFile, type ImportFormat } from "@ai-plugin-toolkit/acceptance";
+import { LoomError, resolveProjectPath } from "@ai-plugin-toolkit/core";
 import { withProject } from "../context.js";
 import { UsageError, type CommandResult } from "../io.js";
 
@@ -23,6 +26,37 @@ interface Base {
   rootDir: string;
   env: Readonly<Record<string, string | undefined>>;
   pack?: string | undefined;
+  cwd?: string;
+}
+
+export async function evidenceImportCommand(
+  options: Base & { file: string; format?: string | undefined; revision?: string | undefined; environment?: string | undefined; dryRun: boolean },
+): Promise<CommandResult> {
+  const format = (options.format ?? (options.file.endsWith(".xml") ? "junit-xml/1" : options.file.endsWith(".md") ? "loom-review/1" : "loom-build/1")) as ImportFormat;
+  if (!IMPORT_FORMATS.includes(format)) throw new UsageError(`--format must be one of: ${IMPORT_FORMATS.join(", ")}`);
+  const absolute = path.resolve(options.cwd ?? options.rootDir, options.file);
+  const text = await readFile(absolute, "utf8");
+  return withProject(options.rootDir, options, async (ctx) => {
+    const pack = await ctx.pack(options.pack);
+    const result = importEvidence(ctx.store, ctx.projectId, pack, {
+      format,
+      text,
+      ref: path.relative(ctx.loaded.rootDir, absolute) || absolute,
+      actor: ctx.actor,
+      dryRun: options.dryRun,
+      ...(options.revision === undefined ? {} : { revision: options.revision }),
+      ...(options.environment === undefined ? {} : { environment: options.environment as "ci" }),
+    });
+    return {
+      data: result as unknown as Record<string, unknown>,
+      lines: [
+        `${options.dryRun ? "Would import" : "Imported"} ${format} at revision ${result.revision} (${result.environment}):`,
+        ...result.items.map((i) => `  ${i.criterion.padEnd(28)} ${i.result.padEnd(12)} ${i.reason}${"skipped" in i && i.skipped ? ` (${i.skipped})` : ""}`),
+        ...(result.items.length === 0 ? ["  no result matched a criterion of this pack"] : []),
+        ...(result.unmatched.length > 0 ? [`  ${result.unmatched.length} result(s) matched no criterion (not counted)`] : []),
+      ],
+    };
+  });
 }
 
 function summaryLines(e: Evaluation): string[] {
@@ -37,12 +71,22 @@ function summaryLines(e: Evaluation): string[] {
   ];
 }
 
-export async function assessCommand(options: Base): Promise<CommandResult> {
+export async function assessCommand(options: Base & { packFile?: string | undefined }): Promise<CommandResult> {
   const id = options.pack;
-  if (id === undefined) throw new UsageError(`Usage: loom assess --pack <id>. Built-in packs: ${BUILTIN_PACKS.join(", ")}.`);
-  const pack = await loadBuiltinPack(id);
+  if ((id === undefined) === (options.packFile === undefined)) {
+    throw new UsageError(`Usage: loom assess --pack <id> | --pack-file <path>. Built-in packs: ${BUILTIN_PACKS.join(", ")}.`);
+  }
   return withProject(options.rootDir, options, async (ctx) => {
-    activatePack(ctx.store, ctx.projectId, pack, ctx.actor);
+    let pack;
+    let source = "builtin";
+    if (options.packFile !== undefined) {
+      const file = resolveProjectPath(ctx.loaded.rootDir, path.relative(ctx.loaded.rootDir, path.resolve(options.cwd ?? ctx.loaded.rootDir, options.packFile)), "--pack-file");
+      pack = await loadPackFile(file);
+      source = path.relative(ctx.loaded.rootDir, file).split(path.sep).join("/");
+    } else {
+      pack = await loadBuiltinPack(id!);
+    }
+    activatePack(ctx.store, ctx.projectId, pack, ctx.actor, source);
     const evaluation = evaluatePack(ctx.store, ctx.projectId, pack);
     return { data: { evaluation }, lines: [`Activated ${pack.id}@${pack.version}.`, ...summaryLines(evaluation), "Next: `loom questions --mode quick`"] };
   });

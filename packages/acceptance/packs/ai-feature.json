@@ -1,0 +1,314 @@
+{
+  "format": "loom-pack/1",
+  "id": "ai-feature",
+  "version": "0.1.0",
+  "title": "AI feature release",
+  "description": "Readiness for shipping a feature that uses a language model: evaluation, failure behaviour, prompt injection, data handling, cost and latency limits, human oversight, and disclosure.",
+  "advisory": "Engineering checklist. Regulatory obligations for AI systems vary by jurisdiction and use; review against the applicable law and provider terms. Passing it is not a safety certification.",
+  "topics": [
+    {
+      "id": "evaluation",
+      "title": "Evaluation"
+    },
+    {
+      "id": "robustness",
+      "title": "Robustness and safety"
+    },
+    {
+      "id": "data",
+      "title": "Data handling"
+    },
+    {
+      "id": "operations",
+      "title": "Cost, latency and operations"
+    },
+    {
+      "id": "oversight",
+      "title": "Human oversight and disclosure"
+    }
+  ],
+  "questions": [
+    {
+      "id": "uses-tools",
+      "topic": "robustness",
+      "text": "Can the model call tools or take actions (write data, send messages, run code)?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "tool",
+        "action",
+        "agent"
+      ]
+    },
+    {
+      "id": "user-content-in-prompt",
+      "topic": "robustness",
+      "text": "Does untrusted content (user input, documents, web pages) reach the prompt?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "user input",
+        "document",
+        "retrieval",
+        "rag"
+      ]
+    },
+    {
+      "id": "personal-data-to-provider",
+      "topic": "data",
+      "text": "Is personal data sent to a model provider?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "personal",
+        "provider",
+        "pii"
+      ]
+    },
+    {
+      "id": "high-impact-decisions",
+      "topic": "oversight",
+      "text": "Do outputs affect decisions about people (eligibility, hiring, credit, health)?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "decision",
+        "eligibility",
+        "hiring",
+        "credit",
+        "health"
+      ]
+    },
+    {
+      "id": "user-facing-output",
+      "topic": "oversight",
+      "text": "Is model output shown directly to end users?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "chat",
+        "answer",
+        "user-facing"
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "evaluation.dataset",
+      "topic": "evaluation",
+      "title": "Evaluation set with recorded baseline",
+      "expected": "A versioned, reviewed evaluation set exists; baseline results are recorded with model and prompt versions.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Evaluation run with versions recorded.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Build an evaluation set and record a baseline",
+        "description": "Create a reviewed evaluation set and record baseline results with versions."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "eval"
+        ]
+      }
+    },
+    {
+      "id": "evaluation.thresholds",
+      "topic": "evaluation",
+      "title": "Release thresholds met",
+      "expected": "Agreed quality thresholds, chosen before tuning on held-out cases, are met by the release candidate.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Evaluation run on held-out cases.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Run the held-out evaluation against thresholds",
+        "description": "Run the release candidate on held-out cases and compare with thresholds."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "eval"
+        ]
+      },
+      "dependsOn": [
+        "evaluation.dataset"
+      ]
+    },
+    {
+      "id": "robustness.failures",
+      "topic": "robustness",
+      "title": "Provider failures degrade safely",
+      "expected": "Timeouts, rate limits, refusals and malformed output produce a defined fallback, not a crash or a fabricated answer.",
+      "severity": "major",
+      "verification": {
+        "method": "Fault-injection tests.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Test provider failure handling",
+        "description": "Inject timeouts, rate limits, refusals and malformed output; check fallbacks."
+      },
+      "evidence": {
+        "junit": [
+          "timeout",
+          "fallback",
+          "refusal",
+          "malformed"
+        ],
+        "checks": []
+      }
+    },
+    {
+      "id": "robustness.injection",
+      "topic": "robustness",
+      "title": "Prompt injection tested",
+      "expected": "Injected instructions in untrusted content do not change behaviour or grant capabilities.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "user-content-in-prompt",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Red-team cases in the evaluation set.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Add prompt-injection test cases",
+        "description": "Add injected instructions to untrusted inputs and verify behaviour."
+      },
+      "evidence": {
+        "junit": [
+          "inject"
+        ],
+        "checks": []
+      }
+    },
+    {
+      "id": "robustness.tool-permissions",
+      "topic": "robustness",
+      "title": "Tool calls are permissioned",
+      "expected": "Actions with side effects require explicit permission or confirmation; tools run with least privilege.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "uses-tools",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Review of tool definitions plus tests of refused actions.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Review tool permissions",
+        "description": "Check side-effecting tools require confirmation and run with least privilege."
+      }
+    },
+    {
+      "id": "data.provider-terms",
+      "topic": "data",
+      "title": "Provider data terms reviewed",
+      "expected": "Data sent to the provider is minimised; retention and training terms are reviewed and documented. (Advisory.)",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "personal-data-to-provider",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Human review of provider terms and data flow.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Review provider data terms",
+        "description": "Minimise data sent and document provider retention and training terms."
+      }
+    },
+    {
+      "id": "operations.budgets",
+      "topic": "operations",
+      "title": "Cost and latency limits enforced",
+      "expected": "Per-request timeouts and token/cost budgets are enforced and monitored; unknown pricing is reported as unknown.",
+      "severity": "major",
+      "verification": {
+        "method": "Configuration review plus load test.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Enforce cost and latency limits",
+        "description": "Set timeouts and budgets, and monitor spend and latency."
+      }
+    },
+    {
+      "id": "oversight.human-review",
+      "topic": "oversight",
+      "title": "Human review of high-impact outputs",
+      "expected": "A person reviews or can contest model-assisted decisions about people. (Advisory: confirm legal obligations.)",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "high-impact-decisions",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Process review.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Define human review for high-impact outputs",
+        "description": "Ensure a person reviews or can contest model-assisted decisions."
+      }
+    },
+    {
+      "id": "oversight.disclosure",
+      "topic": "oversight",
+      "title": "AI use disclosed to users",
+      "expected": "Users can tell when content is model-generated and how to report problems.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "user-facing-output",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "UI review.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Disclose model-generated content",
+        "description": "Label model output and provide a way to report problems."
+      }
+    }
+  ]
+}

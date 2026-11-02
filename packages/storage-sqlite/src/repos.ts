@@ -121,6 +121,9 @@ export interface StoredAnswer {
 export interface StoredEvidence {
   id: string;
   criterionId: string;
+  /** Importer that produced it (e.g. "junit-xml/1"), or undefined for `loom evidence add`. */
+  importer?: string | undefined;
+  importRef?: string | undefined;
   result: "passed" | "failed" | "inconclusive";
   revision: string;
   environment: { kind: string; description?: string };
@@ -135,6 +138,8 @@ export interface StoredDisposition {
   actor: string;
   reason: string | undefined;
   at: string;
+  packVersion?: string | undefined;
+  criterionHash?: string | undefined;
 }
 
 function rowToAnswer(r: Row): StoredAnswer {
@@ -162,27 +167,30 @@ function rowToEvidence(r: Row): StoredEvidence {
     artifactRef: str(r.artifact_ref),
     recordedBy: String(r.recorded_by),
     collectedAt: String(r.collected_at),
+    importer: str(r.importer),
+    importRef: str(r.import_ref),
   };
 }
 
 export class AcceptanceRepo {
   constructor(private readonly db: Db) {}
 
-  activatePack(projectId: string, packId: string, packVersion: string): void {
+  activatePack(projectId: string, packId: string, packVersion: string, source = "builtin"): void {
     this.db.run(
-      `INSERT INTO pack_activations (project_id, pack_id, pack_version, activated_at) VALUES (?, ?, ?, ?)
-       ON CONFLICT (project_id, pack_id) DO UPDATE SET pack_version = excluded.pack_version`,
+      `INSERT INTO pack_activations (project_id, pack_id, pack_version, activated_at, source) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (project_id, pack_id) DO UPDATE SET pack_version = excluded.pack_version, source = excluded.source`,
       projectId,
       packId,
       packVersion,
       now(),
+      source,
     );
   }
 
-  activePacks(projectId: string): Array<{ packId: string; packVersion: string; activatedAt: string }> {
+  activePacks(projectId: string): Array<{ packId: string; packVersion: string; activatedAt: string; source: string }> {
     return this.db
       .all("SELECT * FROM pack_activations WHERE project_id = ? ORDER BY activated_at, pack_id", projectId)
-      .map((r) => ({ packId: String(r.pack_id), packVersion: String(r.pack_version), activatedAt: String(r.activated_at) }));
+      .map((r) => ({ packId: String(r.pack_id), packVersion: String(r.pack_version), activatedAt: String(r.activated_at), source: String(r.source) }));
   }
 
   setAnswer(
@@ -215,11 +223,16 @@ export class AcceptanceRepo {
       .map(rowToAnswer);
   }
 
+  /** True when this import (same file content) already produced evidence for the criterion. */
+  hasImported(projectId: string, criterionId: string, importRef: string): boolean {
+    return this.db.get("SELECT 1 FROM evidence WHERE project_id = ? AND criterion_id = ? AND import_ref = ?", projectId, criterionId, importRef) !== undefined;
+  }
+
   addEvidence(projectId: string, input: Omit<StoredEvidence, "id" | "collectedAt"> & { collectedAt?: string }): StoredEvidence {
     const id = newId("evidence");
     this.db.run(
-      `INSERT INTO evidence (id, project_id, criterion_id, result, revision, env_kind, env_description, artifact_ref, recorded_by, collected_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO evidence (id, project_id, criterion_id, result, revision, env_kind, env_description, artifact_ref, recorded_by, collected_at, importer, import_ref)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id,
       projectId,
       input.criterionId,
@@ -230,6 +243,8 @@ export class AcceptanceRepo {
       input.artifactRef ?? null,
       input.recordedBy,
       input.collectedAt ?? now(),
+      input.importer ?? null,
+      input.importRef ?? null,
     );
     return rowToEvidence(this.db.get("SELECT * FROM evidence WHERE id = ?", id)!);
   }
@@ -245,15 +260,17 @@ export class AcceptanceRepo {
       throw new LoomError("VALIDATION_FAILED", "A waiver needs a reason.");
     }
     this.db.run(
-      `INSERT INTO criterion_dispositions (project_id, criterion_id, disposition, actor, reason, at) VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO criterion_dispositions (project_id, criterion_id, disposition, actor, reason, at, pack_version, criterion_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (project_id, criterion_id) DO UPDATE SET disposition = excluded.disposition, actor = excluded.actor,
-         reason = excluded.reason, at = excluded.at`,
+         reason = excluded.reason, at = excluded.at, pack_version = excluded.pack_version, criterion_hash = excluded.criterion_hash`,
       projectId,
       input.criterionId,
       input.disposition,
       input.actor,
       input.reason ?? null,
       now(),
+      input.packVersion ?? null,
+      input.criterionHash ?? null,
     );
   }
 
@@ -268,6 +285,8 @@ export class AcceptanceRepo {
       actor: String(r.actor),
       reason: str(r.reason),
       at: String(r.at),
+      packVersion: str(r.pack_version),
+      criterionHash: str(r.criterion_hash),
     }));
   }
 }

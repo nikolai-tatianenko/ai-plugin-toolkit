@@ -232,3 +232,23 @@ describe("caches and local embeddings (CL-015)", () => {
     expect(await readFile(path.join(workDir, "loom-docs/STATUS.md"), "utf8")).toMatch(/- embedding: \d+ call\(s\).*cost \$0\.0000/);
   });
 });
+
+describe("custom packs and evidence import (CL-018)", () => {
+  it("activates a pack file inside the project and imports JUnit results without false passes", async () => {
+    await prepared();
+    const pack = {
+      format: "loom-pack/1", id: "team-checks", version: "1.0.0", title: "Team checks", description: "d", advisory: "Internal checklist.",
+      topics: [{ id: "q", title: "Quality" }], questions: [],
+      criteria: [{ id: "q.tests", topic: "q", title: "Unit tests pass", expected: "All unit tests pass", severity: "blocker",
+        verification: { method: "CI", environments: ["ci"] }, task: { title: "Fix tests", description: "Make unit tests pass." }, evidence: { junit: ["^unit\\\\."], checks: [] } }],
+    };
+    await writeFile(path.join(workDir, "team-pack.json"), JSON.stringify(pack));
+    expect((await loom(["assess", "--pack-file", "../outside.json"])).code).toBe(EXIT.failure);
+    expect((await loom(["assess", "--pack-file", "team-pack.json"])).code).toBe(EXIT.ok);
+    await writeFile(path.join(workDir, "junit.xml"), '<testsuites><testsuite><testcase classname="unit" name="a"/><testcase classname="unit" name="b"><skipped/></testcase></testsuite></testsuites>');
+    const imported = (await loom(["evidence", "import", "junit.xml", "--revision", "r1", "--json"])).json().data;
+    expect(imported.items[0]).toMatchObject({ criterion: "q.tests", result: "inconclusive" });
+    await loom(["revision", "set", "r1"]);
+    expect((await loom(["report", "--require-ready"])).code).toBe(EXIT.failure);
+  });
+});
