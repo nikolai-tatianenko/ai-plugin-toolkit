@@ -38,3 +38,5 @@ jobs:
           node apps/cli/dist/main.js --dir "$demo" generate --json | grep -q '"conflicts": 0'
       - name: Extraction evaluation (fixture provider)
         run: pnpm eval
+      - name: Release gate (person-only decisions reported as pending)
+        run: pnpm release:check --allow-pending=license,upstream

@@ -69,17 +69,66 @@ loom tasks list
 
 Edits made in Beads are reported and never overwritten. Status is owned by Beads, and closing a task there does not pass a criterion: record evidence with `loom evidence add`.
 
+## 4. Corrections, review and forgetting
+
+```bash
+loom correct storage "SQLite with iCloud sync" --reason "users asked for backup"   # supersedes, keeps history
+loom review list                                    # cross-source supersessions, possible contradictions
+loom review resolve <id> --action accept|revert|dismiss   # or --keep <record-id>
+loom forget <source-id> --yes                       # deletes the source and everything derived from it
+loom export --out project.json && loom import project.json   # into an empty project
+```
+
+See [data-lifecycle.md](data-lifecycle.md) for what forgetting can and cannot reach.
+
+## 5. Local models, embeddings and caches
+
+```bash
+loom init --dir local --provider ollama --model llama3.1:8b --embeddings ollama   # nothing leaves the machine
+loom init --dir offline --provider fixture --fixture recorded.json --embeddings hashing
+loom embed && loom search reminders offline --semantic
+loom cache stats
+```
+
+## 6. More packs and imported evidence
+
+```bash
+loom assess --pack open-source-release        # also: web-release, ai-feature, or --pack-file my-pack.json
+loom evidence import junit.xml --revision v1.2.0   # junit-xml/1; also loom-build/1 JSON, loom-review/1 Markdown
+```
+
+A criterion passes from imported results only if at least one result matched it and every matched result passed.
+
+## 7. Agents and the inspector
+
+```bash
+loom mcp --dir <project>          # MCP over stdio (read tools; writes only if mcp.allowWrites)
+loom inspect --dir <project>      # read-only web UI on 127.0.0.1 with a token URL
+```
+
+## 8. Two-way task sync and recovery
+
+```bash
+loom tasks pull                   # status comes back; remote edits are kept for a decision
+loom tasks conflicts
+loom tasks resolve <task-id> --keep remote   # or --keep local (publishes over the edit; needs allowWrites)
+loom db backup && loom db status && loom db restore <file> --yes
+```
+
 ## Live and integration tests
 
 | Test | Runs when | Otherwise |
 | --- | --- | --- |
 | Claude live smoke test | `LOOM_LIVE_TESTS=1` and `ANTHROPIC_API_KEY` set | skipped (shown as skipped) |
 | Real Beads scenarios + CLI publish | `bd` 1.3.x on `PATH` or `LOOM_BD_BIN` | skipped with reason; CL-011 gate stays open |
+| Real Task Master scenarios | `task-master` 0.43.x or `LOOM_TASKMASTER_BIN` | skipped with reason; CL-014 gate stays open |
+| Ollama live test | `LOOM_LIVE_TESTS=1 LOOM_OLLAMA_MODEL=<model>` | skipped |
+| Inspector browser tests | Playwright Chromium installed | skipped with reason |
 | Extraction evaluation | `pnpm eval` (fixture) or `pnpm eval -- --provider anthropic` | live run exits 3 with `SKIPPED` without a key |
 
-## Limitations (v0.1)
+## Limitations (0.4.0)
 
-- One real model provider (Claude). No local inference, so fully local operation (A27) is not supported.
-- One task adapter (Beads), one-way. The real-upstream run is pending (see docs/adapters/beads.md).
-- Built-in `mobile-release` pack only. Its platform and legal items are advisory, not reviewed against store policies.
-- No forgetting/retention, contradiction review, caches, embeddings, MCP or UI yet (v0.2+).
+- Real upstream runs (Beads, Task Master) and live model runs are pending; see plan §14.
+- Fully local operation works with Ollama, but has not been verified with network access denied.
+- Pack items about platform and legal rules are advisory. Normalization makes no compliance claim.
+- MCP and the inspector are local-only.

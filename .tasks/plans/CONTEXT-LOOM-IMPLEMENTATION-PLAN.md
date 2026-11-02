@@ -1,6 +1,6 @@
 # Context Loom implementation plan
 
-Status: v0.1 implementation in review (CL-001–CL-012, see [tickets](../tickets/README.md)); real Beads verification pending. What is left: [§14](#14-remaining-work-as-of-2026-11-01). Repository name remains ai-plugin-toolkit. Working product name is not finalized.
+Status: v0.1–v0.4 and the release gate implemented in review (PR #4, see [tickets](../tickets/README.md)); real upstream runs, the license decision and publication pending. What is left: [§14](#14-remaining-work-as-of-2026-11-02). Repository name remains ai-plugin-toolkit. Working product name is not finalized.
 
 ## 1. End-to-end behavior
 
@@ -175,51 +175,39 @@ Choose license, check naming/package availability and dependency licenses, creat
 
 Repository publication, package publication, hosting, and production credentials are final release activities after local gates pass. This planning change does not authorize changing visibility or publishing packages.
 
-## 14. Remaining work (as of 2026-11-01)
+## 14. Remaining work (as of 2026-11-02)
 
-Implemented: CL-001 to CL-010, CL-011/CL-012 code, and part of CL-021, in PR #4 (CI green on Node 22 and 24). This section lists what is still open, in the order it should be done.
+All tickets CL-001 to CL-022 have code in PR #4 (v0.1 to v0.4 plus the release gate). What remains needs either a real upstream binary, credentials, or an owner decision. Nothing below can be closed by more code alone.
 
-### 14.1 Close the v0.1 gate (required)
+### 14.1 To finish (required)
 
-| # | Work | Ticket | Done when |
+| # | Work | Tickets | How |
 | --- | --- | --- | --- |
-| 1 | Run the real Beads suites: install `bd` 1.3.x (`npm install -g @beads/bd@1.3.2`) and run `pnpm test`, or set `LOOM_BD_BIN` | CL-011 | `beads.integration.test.ts` (A14–A17, A22 against real `bd`) and the CLI publish/rerun test pass; output recorded in `docs/adapters/beads.md` and CL-011 |
-| 2 | Fix any real-`bd` incompatibilities found in step 1 (JSON shapes, `updated_at` precision, `dep add` output) | CL-011 | same suites green |
-| 3 | Demonstrate a clean install from ingest to sync (A26 in full), including `tasks sync` in `demo.sh` when `bd` is present | CL-012 | fresh clone run recorded in CL-012 |
-| 4 | Review and merge PR #4; move CL-011 and CL-012 from `blocked` to `implemented` | — | merged, ticket statuses updated |
+| 1 | Run the real Beads suites (A14–A17 against `bd` 1.3.x, CLI publish/rerun) and record results | CL-011, CL-012 | install `bd` 1.3.x, `pnpm test` |
+| 2 | Run the real Task Master suite against `task-master` 0.43.x and record results | CL-014 | install `task-master-ai@0.43.x`, `pnpm test` |
+| 3 | Fix any incompatibilities found in 1–2 | CL-011, CL-014 | — |
+| 4 | Choose the license and add LICENSE; confirm the name (npm: `context-loom` not taken on 2026-11-02; trademark search pending) | CL-022 | owner decision, see docs/release.md |
+| 5 | `pnpm release:check` prints READY with no `--allow-pending` | CL-022 | after 1–4 |
+| 6 | Review and merge PR #4; tag v0.4.0; then (separately authorised) change visibility and publish | CL-022 | manual |
 
-### 14.2 Strongly recommended before calling v0.1 done
+### 14.2 Strongly recommended
 
-| # | Work | Ticket | Why |
-| --- | --- | --- | --- |
-| 5 | One opt-in live run with Claude: `LOOM_LIVE_TESTS=1 pnpm test` and `pnpm eval -- --provider anthropic` (bounded budget, synthetic data) | CL-003, CL-021 | the provider has only been tested against a local stub; no real model output has been measured |
-| 6 | Human review of `eval/datasets/extraction-v1/annotations.json`; record the reviewer in the file | CL-021 | eval results stay provisional until then |
-| 7 | Run full-history and simple-retrieval baselines with the same model and dataset, then pick release thresholds | CL-021 | test plan requires a baseline before thresholds; no comparative claim exists |
-| 8 | Review the mobile pack's platform and legal criteria (account deletion, privacy disclosures, children, ads) against current store and legal sources | CL-007 | currently marked advisory |
+| # | Work | Tickets |
+| --- | --- | --- |
+| 7 | Live model runs: `LOOM_LIVE_TESTS=1 pnpm test` (Claude; Ollama with `LOOM_OLLAMA_MODEL`), `pnpm eval -- --provider anthropic` with a budget | CL-003, CL-015, CL-021 |
+| 8 | Fully local run with Ollama and network access denied (A27) | CL-015 |
+| 9 | Human review of `eval/datasets/*` annotations; run baselines and set thresholds | CL-021, CL-016 |
+| 10 | Review of advisory pack items against store, legal and regulatory sources | CL-007, CL-018 |
+| 11 | Manual screen-reader pass of the inspector | CL-020 |
+| 12 | Before any controlled-language compliance claim: obtain and review the authoritative standard | CL-016 |
 
-### 14.3 Known v0.1 limitations to fix or accept
+### 14.3 Known limitations (accepted for 0.4.0, documented)
 
-- `loom` is not installed on `PATH`; no upward search for `loom.config.json`.
-- No lint/format tooling.
-- `ingest --dry-run` does not report which sources already exist; only `.json`, `.md`, `.markdown`, `.txt` and `.log` imports.
-- Only built-in topic packs; custom pack files are not loadable from the CLI.
-- The project revision is set by hand (`loom revision set`), not read from git/CI.
-- Price table for Claude models is static; unlisted models report unknown cost.
-- Beads adapter has no compare-and-set (check then update), see `docs/adapters/beads.md`.
-- A claim quoted verbatim from injected text passes validation; only review and evaluation catch it (ADR 0005).
-- Restricted projects can only use the fixture provider (no local inference).
-
-### 14.4 Later milestones (unchanged scope, not started)
-
-| Milestone | Tickets |
-| --- | --- |
-| v0.2 | CL-013 corrections, conflicts, deletion and retention (A06 full, A21); CL-014 second adapter (Task Master, see `docs/adapters/task-master.md`) |
-| v0.3 | CL-015 caches and optional embeddings (A24); CL-016 controlled-English normalization (A25); CL-017 MCP interface; CL-018 more topic packs and evidence importers |
-| v0.4 | CL-019 two-way sync and recovery; CL-020 React inspector |
-| v0.1 onward | CL-021 remaining evaluation work (items 5–7 above) |
-| release | CL-022 license, dependency licenses, CONTRIBUTING/SECURITY, name check, then separately authorized publication |
-
-Not supported by any milestone yet: fully local operation with local inference (A27) and multi-user permissions.
+- No separate linter (TypeScript strict is the gate). `loom` runs from the bundle or the repo; no upward config search.
+- Beads has no compare-and-set; Task Master has no non-AI update (updates reported as unsupported).
+- Contradiction detection is lexical; the hashing embedder is lexical.
+- Forgetting cannot reach backups, exports, git history, upstream systems or provider-side retention.
+- MCP and inspector are local-only; multi-user hosting needs an authorization design.
 
 ## References and status
 
