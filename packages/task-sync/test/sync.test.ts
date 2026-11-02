@@ -1,4 +1,11 @@
-import { describe } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { activatePack, answerQuestion, evaluatePack, loadBuiltinPack, parsePack, type TopicPack } from "@ai-plugin-toolkit/acceptance";
+import { LoomStore } from "@ai-plugin-toolkit/storage-sqlite";
+import { applySync, previewSync, pullRemote, remoteConflicts, resolveRemoteEdit } from "../src/index.js";
+
 import { LoomError, defineTaskAdapter, type ExternalTask, type TaskAdapter, type TaskDraft } from "@ai-plugin-toolkit/core";
 import { syncScenarios, type AdapterHarness } from "./scenarios.js";
 
@@ -66,5 +73,76 @@ describe("task sync core (in-memory reference adapter)", () => {
       writes: () => memory.writes,
       cleanup: async () => {},
     };
+  });
+});
+
+describe("two-way reconciliation (CL-019, reference adapter)", () => {
+  let dir: string;
+  let store: LoomStore;
+  let pack: TopicPack;
+  let memory: MemoryTasks;
+  const P = "habit";
+  const evals = () => [evaluatePack(store, P, pack)];
+  const sync = () => applySync(store, P, memory, evals(), { allowWrites: true, actor: "t" });
+
+  beforeEach(async () => {
+    dir = await mkdtemp(path.join(tmpdir(), "loom-twoway-"));
+    store = await LoomStore.open({ storageDir: dir });
+    store.ensureProject(P, "Habit");
+    pack = await loadBuiltinPack("mobile-release");
+    activatePack(store, P, pack, "t");
+    for (const [q, v] of [["platforms", "android"], ["accounts", "no"], ["purchases", "no"], ["ads", "no"], ["children", "no"], ["personal-data", "no"], ["remote-data", "no"], ["offline", "no"], ["notifications", "no"]] as const) {
+      answerQuestion(store, P, pack, { question: q, value: v, actor: "pat" });
+    }
+    memory = defineTaskAdapter(new MemoryTasks());
+    await sync();
+  });
+  afterEach(async () => {
+    store.close();
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("pulls status directly and records content edits for resolution without overwriting either side", async () => {
+    const [a, b] = store.tasks.mappings(P, "memory");
+    memory.tasks.get(a!.externalId)!.status = "closed";
+    memory.tasks.get(a!.externalId)!.revision = "manual-1";
+    memory.edit(b!.externalId, "Edited in the tracker");
+    const pulled = await pullRemote(store, P, memory, "t");
+    expect(pulled.statusChanged).toEqual([{ taskId: a!.taskId, from: "open", to: "closed" }]);
+    expect(pulled.edited.map((e) => e.taskId)).toEqual([b!.taskId]);
+    expect(store.tasks.get(P, b!.taskId)!.title).not.toBe("Edited in the tracker");
+    expect(remoteConflicts(store, P).map((t) => t.id)).toEqual([b!.taskId]);
+    expect((await pullRemote(store, P, memory, "t")).edited).toHaveLength(1);
+  });
+
+  it("keep-remote stops updates; a later plan change becomes a conflict, not an overwrite", async () => {
+    const [m] = store.tasks.mappings(P, "memory");
+    memory.edit(m!.externalId, "Tracker wording");
+    await pullRemote(store, P, memory, "t");
+    await resolveRemoteEdit(store, P, memory, { taskId: m!.taskId, keep: "remote", actor: "lead", allowWrites: false });
+    expect(remoteConflicts(store, P)).toEqual([]);
+    expect((await previewSync(store, P, memory, evals())).changes.find((c) => c.taskId === m!.taskId)!.kind).toBe("unchanged");
+
+    pack = parsePack({ ...pack, version: "9.0.0", criteria: pack.criteria.map((c) => ({ ...c, task: { ...c.task, title: `${c.task.title}!` } })) });
+    const result = await sync();
+    expect(result.changes.find((c) => c.taskId === m!.taskId)!.kind).toBe("conflict");
+    expect(memory.tasks.get(m!.externalId)!.title).toBe("Tracker wording");
+  });
+
+  it("keep-local publishes the plan over the edit only with write permission", async () => {
+    const [m] = store.tasks.mappings(P, "memory");
+    memory.edit(m!.externalId, "Tracker wording");
+    await pullRemote(store, P, memory, "t");
+    await expect(resolveRemoteEdit(store, P, memory, { taskId: m!.taskId, keep: "local", actor: "lead", allowWrites: false })).rejects.toMatchObject({ code: "POLICY_VIOLATION" });
+    await resolveRemoteEdit(store, P, memory, { taskId: m!.taskId, keep: "local", actor: "lead", allowWrites: true });
+    expect(memory.tasks.get(m!.externalId)!.title).toBe(store.tasks.get(P, m!.taskId)!.title);
+    expect((await previewSync(store, P, memory, evals())).changes.find((c) => c.taskId === m!.taskId)!.kind).toBe("unchanged");
+  });
+
+  it("refuses a concurrent sync while another holds the lock", async () => {
+    expect(store.tasks.acquireLock(P, "sync.memory", "other-process", 60_000)).toBe(true);
+    await expect(sync()).rejects.toMatchObject({ code: "CONFLICT" });
+    store.tasks.releaseLock(P, "sync.memory", "other-process");
+    await expect(sync()).resolves.toMatchObject({ status: "ok" });
   });
 });

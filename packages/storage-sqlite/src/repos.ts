@@ -383,6 +383,10 @@ export interface LocalTask {
   retired: boolean;
   createdAt: string;
   updatedAt: string;
+  /** Remote edit pulled back for resolution (CL-019). */
+  remoteTitle: string | undefined;
+  remoteDescription: string | undefined;
+  resolution: "keep-local" | "keep-remote" | undefined;
 }
 
 export interface SyncMappingRecord {
@@ -420,6 +424,9 @@ function rowToTask(r: Row): LocalTask {
     retired: Number(r.retired) === 1,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
+    remoteTitle: str(r.remote_title),
+    remoteDescription: str(r.remote_description),
+    resolution: (str(r.resolution) as LocalTask["resolution"]) ?? undefined,
   };
 }
 
@@ -491,6 +498,56 @@ export class TaskRepo {
   /** Tasks no longer produced by planning are retired locally, never deleted remotely. */
   retire(projectId: string, id: string): void {
     this.db.run("UPDATE tasks SET retired = 1, updated_at = ? WHERE project_id = ? AND id = ?", now(), projectId, id);
+  }
+
+  /** Record the remote's current content for a person to resolve; clears any earlier resolution. */
+  recordRemoteEdit(projectId: string, id: string, title: string, description: string | undefined): void {
+    this.db.run(
+      "UPDATE tasks SET remote_title = ?, remote_description = ?, resolution = NULL WHERE project_id = ? AND id = ?",
+      title,
+      description ?? null,
+      projectId,
+      id,
+    );
+  }
+
+  resolveRemoteEdit(projectId: string, id: string, resolution: "keep-local" | "keep-remote"): void {
+    this.db.run(
+      `UPDATE tasks SET resolution = ?, remote_title = CASE WHEN ? = 'keep-local' THEN NULL ELSE remote_title END,
+         remote_description = CASE WHEN ? = 'keep-local' THEN NULL ELSE remote_description END WHERE project_id = ? AND id = ?`,
+      resolution,
+      resolution,
+      resolution,
+      projectId,
+      id,
+    );
+  }
+
+  /** Advisory lock so two sync runs never write concurrently. Stale locks expire. */
+  acquireLock(projectId: string, name: string, owner: string, ttlMs: number): boolean {
+    return this.db.transaction(() => {
+      const row = this.db.get("SELECT value FROM project_state WHERE project_id = ? AND key = ?", projectId, `lock.${name}`);
+      if (row !== undefined) {
+        const held = JSON.parse(String(row.value)) as { owner: string; at: number };
+        if (Date.now() - held.at < ttlMs && held.owner !== owner) return false;
+      }
+      this.db.run(
+        `INSERT INTO project_state (project_id, key, value, updated_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (project_id, key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+        projectId,
+        `lock.${name}`,
+        json({ owner, at: Date.now() }),
+        now(),
+      );
+      return true;
+    });
+  }
+
+  releaseLock(projectId: string, name: string, owner: string): void {
+    const row = this.db.get("SELECT value FROM project_state WHERE project_id = ? AND key = ?", projectId, `lock.${name}`);
+    if (row !== undefined && (JSON.parse(String(row.value)) as { owner: string }).owner === owner) {
+      this.db.run("DELETE FROM project_state WHERE project_id = ? AND key = ?", projectId, `lock.${name}`);
+    }
   }
 
   setStatusFromRemote(projectId: string, id: string, status: LocalTask["status"]): void {
