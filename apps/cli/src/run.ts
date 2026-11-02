@@ -35,7 +35,17 @@ import {
   requireNumber,
   searchCommand,
 } from "./commands/memory.js";
-import { generateCommand, tasksInitCommand, tasksListCommand, tasksPreviewCommand, tasksSyncCommand } from "./commands/output.js";
+import {
+  dbCommand,
+  generateCommand,
+  tasksConflictsCommand,
+  tasksInitCommand,
+  tasksListCommand,
+  tasksPreviewCommand,
+  tasksPullCommand,
+  tasksResolveCommand,
+  tasksSyncCommand,
+} from "./commands/output.js";
 import { sourcesListCommand, sourcesShowCommand } from "./commands/sources.js";
 import { EXIT, UsageError, writeFailure, writeSuccess, type CliIo, type CommandResult, type ExitCode } from "./io.js";
 
@@ -90,6 +100,13 @@ Tasks
   tasks preview              Show the task change set; writes nothing
   tasks sync                 Publish the change set (requires tasks.allowWrites: true)
   tasks list                 Local tasks and their external IDs
+  tasks pull                 Read remote status and edits back (status is owned by the task system)
+  tasks conflicts            Remote edits waiting for a decision
+  tasks resolve <task-id>    --keep remote (stop updating it) | --keep local (publish over the edit)
+
+Database
+  db status | backup         Schema version and backups; write a backup now
+  db restore <file> --yes    Replace the database with a backup (previous file kept)
 
 Global options
   --dir <path>   Project directory (default: current directory)
@@ -396,6 +413,24 @@ const COMMANDS: Command[] = [
     },
   },
   { words: ["tasks", "list"], args: 0, options: [], usage: "loom tasks list", run: (inv) => ok(tasksListCommand(base(inv))) },
+  { words: ["tasks", "pull"], args: 0, options: [], usage: "loom tasks pull", run: (inv) => ok(tasksPullCommand(base(inv))) },
+  { words: ["tasks", "conflicts"], args: 0, options: [], usage: "loom tasks conflicts", run: (inv) => ok(tasksConflictsCommand(base(inv))) },
+  {
+    words: ["tasks", "resolve"],
+    args: 1,
+    options: ["keep"],
+    usage: "loom tasks resolve <task-id> --keep local|remote",
+    run: (inv) => ok(tasksResolveCommand({ ...base(inv), taskId: inv.args[0]!, keep: inv.values.keep })),
+  },
+  { words: ["db", "status"], args: 0, options: [], usage: "loom db status", run: (inv) => ok(dbCommand({ ...base(inv), action: "status", yes: false, cwd: inv.cwd })) },
+  { words: ["db", "backup"], args: 0, options: [], usage: "loom db backup", run: (inv) => ok(dbCommand({ ...base(inv), action: "backup", yes: false, cwd: inv.cwd })) },
+  {
+    words: ["db", "restore"],
+    args: 1,
+    options: ["yes"],
+    usage: "loom db restore <backup.db> --yes",
+    run: (inv) => ok(dbCommand({ ...base(inv), action: "restore", file: inv.args[0]!, yes: inv.values.yes === true, cwd: inv.cwd })),
+  },
 ];
 
 function rejectUnsupported(command: Command, values: Values): void {

@@ -134,7 +134,10 @@ function buildChanges(
     }
     const remoteChanged = current !== undefined && mapping.lastRemoteRevision !== undefined && current.revision !== mapping.lastRemoteRevision;
     const localChanged = revision > mapping.lastLocalRevision;
-    if (localChanged && remoteChanged) {
+    const local = store.tasks.get(projectId, planned.id);
+    if (localChanged && local?.resolution === "keep-remote") {
+      changes.push({ ...base, kind: "conflict", externalId: mapping.externalId, reason: "a person chose to keep the remote version; resolve again (`loom tasks resolve`) to publish the changed plan" });
+    } else if (localChanged && remoteChanged) {
       changes.push({ ...base, kind: "conflict", externalId: mapping.externalId, reason: "both the local plan and the remote task changed since the last sync; remote edits are kept" });
     } else if (localChanged) {
       changes.push({ ...base, kind: "update", externalId: mapping.externalId, reason: `local revision ${mapping.lastLocalRevision} → ${revision}` });
@@ -214,6 +217,25 @@ export async function applySync(
   if (!options.allowWrites) {
     throw new LoomError("POLICY_VIOLATION", "Publishing tasks is disabled for this project. Set tasks.allowWrites to true in loom.config.json, or use `loom tasks preview`.");
   }
+  const name = adapter.manifest.name;
+  const owner = `${process.pid}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+  if (!store.tasks.acquireLock(projectId, `sync.${name}`, owner, 10 * 60_000)) {
+    throw new LoomError("CONFLICT", `Another sync with ${name} is in progress for this project. Retry when it finishes (locks expire after 10 minutes).`);
+  }
+  try {
+    return await applySyncLocked(store, projectId, adapter, evaluations, options);
+  } finally {
+    store.tasks.releaseLock(projectId, `sync.${name}`, owner);
+  }
+}
+
+async function applySyncLocked(
+  store: LoomStore,
+  projectId: string,
+  adapter: TaskAdapter,
+  evaluations: readonly Evaluation[],
+  options: SyncOptions,
+): Promise<SyncResult> {
   const name = adapter.manifest.name;
   const pending = store.tasks.pendingIntents(projectId, name);
   if (pending.some((i) => i.operation === "create") && !supportsTaskCapability(adapter, "readTasks")) {
@@ -345,4 +367,101 @@ function mappingInput(m: SyncMappingRecord): Omit<SyncMappingRecord, "id" | "syn
     lastRemoteRevision: m.lastRemoteRevision,
     linkedDeps: m.linkedDeps,
   };
+}
+
+// ---- Two-way reconciliation (CL-019) ----------------------------------------------------
+
+export interface PullResult {
+  edited: Array<{ taskId: string; externalId: string; remoteTitle: string }>;
+  statusChanged: Array<{ taskId: string; from: string; to: string }>;
+  missing: string[];
+  unchanged: number;
+}
+
+/**
+ * Read remote changes back. Status (owned by the task system) is applied directly.
+ * Content edits are recorded next to the local plan for a person to resolve; nothing is
+ * overwritten in either direction.
+ */
+export async function pullRemote(store: LoomStore, projectId: string, adapter: TaskAdapter, actor: string): Promise<PullResult> {
+  const remote = await readRemote(adapter);
+  if (remote === undefined) throw new LoomError("UNSUPPORTED_CAPABILITY", `Adapter "${adapter.manifest.name}" cannot read remote tasks.`);
+  const result: PullResult = { edited: [], statusChanged: [], missing: [], unchanged: 0 };
+  store.transaction(() => {
+    for (const mapping of store.tasks.mappings(projectId, adapter.manifest.name)) {
+      const task = store.tasks.get(projectId, mapping.taskId);
+      const current = remote.get(mapping.externalId);
+      if (task === undefined) continue;
+      if (current === undefined) {
+        result.missing.push(task.id);
+        continue;
+      }
+      if (current.status !== task.status) {
+        result.statusChanged.push({ taskId: task.id, from: task.status, to: current.status });
+        store.tasks.setStatusFromRemote(projectId, task.id, current.status);
+      }
+      if (current.revision === mapping.lastRemoteRevision) {
+        result.unchanged++;
+        continue;
+      }
+      const contentDiffers = current.title !== task.title || (current.description ?? "") !== (task.description ?? "");
+      const alreadyKept = task.resolution === "keep-remote" && task.remoteTitle === current.title && (task.remoteDescription ?? "") === (current.description ?? "");
+      if (contentDiffers && !alreadyKept) {
+        store.tasks.recordRemoteEdit(projectId, task.id, current.title, current.description);
+        result.edited.push({ taskId: task.id, externalId: current.externalId, remoteTitle: current.title });
+      } else {
+        // Only status or untracked fields changed: accept the new remote revision.
+        store.tasks.saveMapping(projectId, { ...mappingInput(mapping), lastRemoteRevision: current.revision });
+        result.unchanged++;
+      }
+    }
+    store.audit(projectId, "tasks.pull", actor, result.edited.map((e) => e.taskId));
+  });
+  return result;
+}
+
+/** Tasks whose remote edits wait for a decision. */
+export function remoteConflicts(store: LoomStore, projectId: string): LocalTask[] {
+  return store.tasks.list(projectId).filter((t) => t.remoteTitle !== undefined && t.resolution === undefined);
+}
+
+/**
+ * Resolve a remote edit. keep-remote: the remote text stays, and Loom stops proposing
+ * updates for this task until the plan changes again (which is then a conflict).
+ * keep-local: the local plan is published over the remote edit — an explicit, audited
+ * override that requires write permission.
+ */
+export async function resolveRemoteEdit(
+  store: LoomStore,
+  projectId: string,
+  adapter: TaskAdapter,
+  input: { taskId: string; keep: "local" | "remote"; actor: string; allowWrites: boolean },
+): Promise<{ taskId: string; externalId: string; kept: "local" | "remote" }> {
+  const task = store.tasks.get(projectId, input.taskId);
+  if (task === undefined) throw new LoomError("NOT_FOUND", `No task ${input.taskId}.`);
+  const mapping = store.tasks.mapping(projectId, adapter.manifest.name, task.id);
+  if (mapping === undefined) throw new LoomError("NOT_FOUND", `Task ${task.id} is not published to ${adapter.manifest.name}.`);
+  const remote = (await readRemote(adapter))?.get(mapping.externalId);
+  if (remote === undefined) throw new LoomError("NOT_FOUND", `Remote task ${mapping.externalId} no longer exists.`);
+  if (input.keep === "remote") {
+    store.transaction(() => {
+      store.tasks.recordRemoteEdit(projectId, task.id, remote.title, remote.description);
+      store.tasks.resolveRemoteEdit(projectId, task.id, "keep-remote");
+      store.tasks.saveMapping(projectId, { ...mappingInput(mapping), lastLocalRevision: task.revision, lastRemoteRevision: remote.revision });
+      store.audit(projectId, "tasks.resolve.keep-remote", input.actor, [task.id]);
+    });
+    return { taskId: task.id, externalId: mapping.externalId, kept: "remote" };
+  }
+  if (!input.allowWrites) throw new LoomError("POLICY_VIOLATION", "Keeping the local version writes to the task system; set tasks.allowWrites to true.");
+  const updated = await requireTaskCapability(adapter, "updateTask")(
+    mapping.externalId,
+    { title: task.title, ...(task.description === undefined ? {} : { description: task.description }) },
+    remote.revision,
+  );
+  store.transaction(() => {
+    store.tasks.resolveRemoteEdit(projectId, task.id, "keep-local");
+    store.tasks.saveMapping(projectId, { ...mappingInput(mapping), lastLocalRevision: task.revision, lastRemoteRevision: updated.revision });
+    store.audit(projectId, "tasks.resolve.keep-local", input.actor, [task.id]);
+  });
+  return { taskId: task.id, externalId: mapping.externalId, kept: "local" };
 }

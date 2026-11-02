@@ -252,3 +252,17 @@ describe("custom packs and evidence import (CL-018)", () => {
     expect((await loom(["report", "--require-ready"])).code).toBe(EXIT.failure);
   });
 });
+
+describe("database backup and restore (CL-019)", () => {
+  it("restores a backup and keeps the replaced database", async () => {
+    await prepared();
+    const backup = (await loom(["db", "backup", "--json"])).json().data.backup as string;
+    await writeFile(path.join(workDir, "later.md"), "Added after the backup.");
+    await loom(["ingest", "later.md"]);
+    expect((await loom(["sources", "list", "--json"])).json().data.total).toBe(2);
+    expect((await loom(["db", "restore", backup])).code).toBe(EXIT.usage);
+    expect((await loom(["db", "restore", backup, "--yes"])).code).toBe(EXIT.ok);
+    expect((await loom(["sources", "list", "--json"])).json().data.total).toBe(1);
+    expect((await loom(["db", "status", "--json"])).json().data.backups.length).toBeGreaterThan(0);
+  });
+});
