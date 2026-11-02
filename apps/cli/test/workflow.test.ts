@@ -240,7 +240,7 @@ describe("custom packs and evidence import (CL-018)", () => {
       format: "loom-pack/1", id: "team-checks", version: "1.0.0", title: "Team checks", description: "d", advisory: "Internal checklist.",
       topics: [{ id: "q", title: "Quality" }], questions: [],
       criteria: [{ id: "q.tests", topic: "q", title: "Unit tests pass", expected: "All unit tests pass", severity: "blocker",
-        verification: { method: "CI", environments: ["ci"] }, task: { title: "Fix tests", description: "Make unit tests pass." }, evidence: { junit: ["^unit\\\\."], checks: [] } }],
+        verification: { method: "CI", environments: ["ci"] }, task: { title: "Fix tests", description: "Make unit tests pass." }, evidence: { junit: ["^unit\\."], checks: [] } }],
     };
     await writeFile(path.join(workDir, "team-pack.json"), JSON.stringify(pack));
     expect((await loom(["assess", "--pack-file", "../outside.json"])).code).toBe(EXIT.failure);
