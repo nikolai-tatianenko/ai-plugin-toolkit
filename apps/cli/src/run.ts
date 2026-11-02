@@ -14,6 +14,7 @@ import {
 } from "./commands/acceptance.js";
 import { configValidateCommand } from "./commands/config.js";
 import { mcpCommand } from "./commands/mcp.js";
+import { inspectCommand } from "./commands/inspect.js";
 import {
   correctCommand,
   exportCommand,
@@ -107,8 +108,9 @@ Tasks
   tasks conflicts            Remote edits waiting for a decision
   tasks resolve <task-id>    --keep remote (stop updating it) | --keep local (publish over the edit)
 
-Agents
+Agents and inspection
   mcp                        MCP server over stdio for this project (read tools; writes if mcp.allowWrites)
+  inspect [--port <n>]       Read-only web inspector on 127.0.0.1 (token-protected URL)
 
 Database
   db status | backup         Schema version and backups; write a backup now
@@ -173,6 +175,7 @@ const OPTIONS = {
   "pack-file": { type: "string" },
   normalize: { type: "boolean", default: false },
   "via-model": { type: "boolean", default: false },
+  port: { type: "string" },
   file: { type: "string" },
   format: { type: "string" },
 } as const;
@@ -182,6 +185,7 @@ type Values = { [K in OptionName]?: (typeof OPTIONS)[K]["type"] extends "boolean
 const GLOBAL_OPTIONS: readonly OptionName[] = ["dir", "json", "help", "version"];
 
 interface Invocation {
+  stdout: (text: string) => void;
   stderr: (text: string) => void;
   rootDir: string;
   cwd: string;
@@ -418,6 +422,13 @@ const COMMANDS: Command[] = [
       return { result, ...(inv.values["require-ready"] && !ready ? { exit: EXIT.failure } : {}) };
     },
   },
+  {
+    words: ["inspect"],
+    args: 0,
+    options: ["port"],
+    usage: "loom inspect [--port <n>]",
+    run: (inv) => ok(inspectCommand({ ...base(inv), port: requireNumber(inv.values.port, "port", 0, 0, 65_535), stdout: inv.stdout })),
+  },
   { words: ["mcp"], args: 0, options: [], usage: "loom mcp", run: (inv) => ok(mcpCommand({ ...base(inv), stderr: inv.stderr })) },
   { words: ["tasks", "init"], args: 0, options: [], usage: "loom tasks init", run: (inv) => ok(tasksInitCommand(base(inv))) },
   { words: ["tasks", "preview"], args: 0, options: [], usage: "loom tasks preview", run: (inv) => ok(tasksPreviewCommand(base(inv))) },
@@ -505,6 +516,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<ExitCode>
     const outcome = await command.run({
       rootDir: path.resolve(io.cwd, values.dir ?? "."),
       stderr: io.stderr,
+      stdout: io.stdout,
       cwd: io.cwd,
       env: io.env,
       args,
