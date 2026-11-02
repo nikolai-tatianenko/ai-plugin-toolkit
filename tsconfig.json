@@ -44,6 +44,9 @@
       "path": "packages/interface-mcp"
     },
     {
+      "path": "packages/inspector"
+    },
+    {
       "path": "apps/cli"
     },
     {

@@ -34,7 +34,8 @@
     "@ai-plugin-toolkit/adapter-taskmaster": "workspace:*",
     "@ai-plugin-toolkit/normalize": "workspace:*",
     "@ai-plugin-toolkit/interface-mcp": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.32.0"
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "@ai-plugin-toolkit/inspector": "workspace:*"
   },
   "devDependencies": {}
 }

@@ -7,7 +7,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node packages/inspector/build-ui.mjs",
     "clean": "tsc -b --clean",
     "test": "vitest run",
     "check": "pnpm build && pnpm test",
