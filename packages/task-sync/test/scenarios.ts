@@ -107,11 +107,17 @@ export function syncScenarios(makeHarness: (workDir: string) => Promise<AdapterH
     const preview2 = await previewSync(store, P, h.adapter, evaluations());
     expect(preview2.changes.find((c) => c.externalId === target.externalId)).toMatchObject({ kind: "conflict" });
     const result = await sync();
-    expect(result.failures).toEqual([]);
     const remote = await remoteTasks();
     expect(remote.find((t) => t.externalId === target.externalId)!.title).toBe("Edited by a person");
-    expect(remote.filter((t) => t.externalId !== target.externalId).every((t) => t.title.endsWith("(v2)"))).toBe(true);
-    expect(result.applied.filter((c) => c.kind === "update")).toHaveLength(remote.length - 1);
+    if (h.adapter.manifest.capabilities.includes("updateTask")) {
+      expect(result.failures).toEqual([]);
+      expect(remote.filter((t) => t.externalId !== target.externalId).every((t) => t.title.endsWith("(v2)"))).toBe(true);
+      expect(result.applied.filter((c) => c.kind === "update")).toHaveLength(remote.length - 1);
+    } else {
+      // A22: an adapter without updates reports each update explicitly instead of pretending success.
+      expect(result.failures.length).toBe(remote.length - 1);
+      expect(result.failures.every((f) => f.code === "UNSUPPORTED_CAPABILITY")).toBe(true);
+    }
   });
 
   it("A17: a crash after some external creates is reconciled without duplicates", async () => {

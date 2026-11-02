@@ -42,7 +42,7 @@ export const RoutingPolicySchema = z.strictObject({
 });
 export type RoutingPolicy = z.infer<typeof RoutingPolicySchema>;
 
-export const TASK_ADAPTERS = ["beads"] as const;
+export const TASK_ADAPTERS = ["beads", "taskmaster"] as const;
 
 export const TaskSyncConfigSchema = z.strictObject({
   adapter: z.enum(TASK_ADAPTERS),
@@ -59,6 +59,19 @@ export const TaskSyncConfigSchema = z.strictObject({
       command: z.string().min(1).default("bd"),
     })
     .default({ dir: ".beads", command: "bd" }),
+  taskmaster: z
+    .strictObject({
+      /** Directory containing `.taskmaster/`, relative to the project directory. */
+      dir: z.string().min(1).default("."),
+      command: z.string().min(1).default("task-master"),
+      tag: z.string().regex(/^[A-Za-z0-9._-]{1,64}$/).default("master"),
+    })
+    .default({ dir: ".", command: "task-master", tag: "master" }),
+  /**
+   * Who owns task status. Only the external task system can own it in this version:
+   * Loom reads status back and never sets or closes tasks.
+   */
+  statusOwner: z.literal("external").default("external"),
 });
 export type TaskSyncConfig = z.output<typeof TaskSyncConfigSchema>;
 
@@ -119,6 +132,7 @@ export const LoomConfigSchema = z
       [config.storage.dir, ["storage", "dir"]],
       [config.artifacts.dir, ["artifacts", "dir"]],
       [config.tasks?.beads.dir, ["tasks", "beads", "dir"]],
+      ...(config.tasks?.taskmaster.dir === "." ? [] : ([[config.tasks?.taskmaster.dir, ["tasks", "taskmaster", "dir"]]] as Array<[string | undefined, (string | number)[]]>)),
       ...Object.entries(config.providers).map(
         ([name, p]): [string | undefined, (string | number)[]] => [p.fixture, ["providers", name, "fixture"]],
       ),

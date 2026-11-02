@@ -93,7 +93,8 @@ export async function tasksInitCommand(options: Base): Promise<CommandResult> {
     const adapter = ctx.taskAdapter();
     const version = await adapter.checkVersion();
     const status = await adapter.initialize();
-    return { data: { adapter: "beads", version, status }, lines: [`Beads ${version}: database ${status === "created" ? "created" : "already present"}.`] };
+    const name = adapter.manifest.upstream.name;
+    return { data: { adapter: adapter.manifest.name, version, status }, lines: [`${name} ${version}: ${status === "created" ? "initialized" : "already initialized"}.`] };
   });
 }
 

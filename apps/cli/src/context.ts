@@ -1,5 +1,7 @@
 import { activePackId, loadBuiltinPack, loadPackFile, type TopicPack } from "@ai-plugin-toolkit/acceptance";
-import { createBeadsAdapter, type BeadsAdapter } from "@ai-plugin-toolkit/adapter-beads";
+import { createBeadsAdapter } from "@ai-plugin-toolkit/adapter-beads";
+import { createTaskMasterAdapter } from "@ai-plugin-toolkit/adapter-taskmaster";
+import type { TaskAdapter } from "@ai-plugin-toolkit/core";
 import { LoomError, resolveProjectPath, type ProviderConfig } from "@ai-plugin-toolkit/core";
 import { createAnthropicProvider } from "@ai-plugin-toolkit/provider-anthropic";
 import { createOllamaProvider } from "@ai-plugin-toolkit/provider-ollama";
@@ -7,6 +9,9 @@ import { Router, fixtureProviderFactory, hashingEmbedderFactory, type ProviderFa
 import { permissionsRevision } from "@ai-plugin-toolkit/retrieval";
 import { LoomStore } from "@ai-plugin-toolkit/storage-sqlite";
 import { loadConfigFile, type LoadedConfig } from "./config-file.js";
+
+/** A task adapter plus the lifecycle helpers every supported upstream provides. */
+export type ManagedTaskAdapter = TaskAdapter & { checkVersion(): Promise<string>; initialize(): Promise<"created" | "existing"> };
 
 export interface ProjectContext {
   loaded: LoadedConfig;
@@ -19,7 +24,7 @@ export interface ProjectContext {
   embedder(): { embed: (texts: readonly string[]) => Promise<{ vectors: number[][]; model: string }>; model: string } | undefined;
   /** Hash of the access-relevant configuration, used in cache keys. */
   permissions: string;
-  taskAdapter(): BeadsAdapter;
+  taskAdapter(): ManagedTaskAdapter;
   pack(requested?: string): Promise<TopicPack>;
   activePacks(): Promise<TopicPack[]>;
 }
@@ -66,7 +71,7 @@ export async function withProject<T>(
     return pack;
   };
   let router: Router | undefined;
-  let adapter: BeadsAdapter | undefined;
+  let adapter: ManagedTaskAdapter | undefined;
   const ctx: ProjectContext = {
     loaded,
     projectId,
@@ -104,14 +109,24 @@ export async function withProject<T>(
       if (tasks === undefined) {
         throw new LoomError("CONFIG_INVALID", 'No task adapter configured. Add "tasks": {"adapter": "beads"} to loom.config.json (see docs/quickstart.md).');
       }
-      adapter ??= createBeadsAdapter({
-        command: tasks.beads.command,
-        beadsDir: resolveProjectPath(loaded.rootDir, tasks.beads.dir, "tasks.beads.dir"),
-        cwd: loaded.rootDir,
-        env: { ...process.env, ...io.env },
-        actor,
-        allowUntestedVersion: io.env.LOOM_BEADS_ALLOW_UNTESTED === "1",
-      });
+      const env = { ...process.env, ...io.env };
+      adapter ??=
+        tasks.adapter === "taskmaster"
+          ? createTaskMasterAdapter({
+              command: tasks.taskmaster.command,
+              projectDir: tasks.taskmaster.dir === "." ? loaded.rootDir : resolveProjectPath(loaded.rootDir, tasks.taskmaster.dir, "tasks.taskmaster.dir"),
+              tag: tasks.taskmaster.tag,
+              env,
+              allowUntestedVersion: io.env.LOOM_TASKMASTER_ALLOW_UNTESTED === "1",
+            })
+          : createBeadsAdapter({
+              command: tasks.beads.command,
+              beadsDir: resolveProjectPath(loaded.rootDir, tasks.beads.dir, "tasks.beads.dir"),
+              cwd: loaded.rootDir,
+              env,
+              actor,
+              allowUntestedVersion: io.env.LOOM_BEADS_ALLOW_UNTESTED === "1",
+            });
       return adapter;
     },
     async pack(requested) {

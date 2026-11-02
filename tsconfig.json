@@ -35,6 +35,9 @@
       "path": "packages/adapter-beads"
     },
     {
+      "path": "packages/adapter-taskmaster"
+    },
+    {
       "path": "apps/cli"
     },
     {

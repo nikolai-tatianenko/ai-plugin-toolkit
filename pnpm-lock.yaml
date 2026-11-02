@@ -26,6 +26,9 @@ importers:
       '@ai-plugin-toolkit/adapter-beads':
         specifier: workspace:*
         version: link:../../packages/adapter-beads
+      '@ai-plugin-toolkit/adapter-taskmaster':
+        specifier: workspace:*
+        version: link:../../packages/adapter-taskmaster
       '@ai-plugin-toolkit/artifacts':
         specifier: workspace:*
         version: link:../../packages/artifacts
@@ -92,6 +95,28 @@ importers:
 
   packages/adapter-beads:
     dependencies:
+      '@ai-plugin-toolkit/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@ai-plugin-toolkit/acceptance':
+        specifier: workspace:*
+        version: link:../acceptance
+      '@ai-plugin-toolkit/storage-sqlite':
+        specifier: workspace:*
+        version: link:../storage-sqlite
+      '@ai-plugin-toolkit/task-sync':
+        specifier: workspace:*
+        version: link:../task-sync
+
+  packages/adapter-taskmaster:
+    dependencies:
+      '@ai-plugin-toolkit/adapter-beads':
+        specifier: workspace:*
+        version: link:../adapter-beads
       '@ai-plugin-toolkit/core':
         specifier: workspace:*
         version: link:../core
