@@ -18,7 +18,8 @@
   "dependencies": {
     "@ai-plugin-toolkit/core": "workspace:*",
     "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
-    "@ai-plugin-toolkit/router": "workspace:*"
+    "@ai-plugin-toolkit/router": "workspace:*",
+    "zod": "4.6.7"
   },
   "description": "Source-linked fact and decision extraction, span resolution and memory inspection."
 }

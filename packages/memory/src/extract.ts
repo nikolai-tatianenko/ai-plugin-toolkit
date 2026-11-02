@@ -16,6 +16,7 @@ import {
 import type { Router } from "@ai-plugin-toolkit/router";
 import type { LoomStore } from "@ai-plugin-toolkit/storage-sqlite";
 import { renderForModel, resolveQuote, speakerAt } from "./evidence-text.js";
+import { detectContradictions, flagCrossSourceSupersession } from "./lifecycle.js";
 
 export const EXTRACTION_SYSTEM_PROMPT = `You extract project knowledge from evidence into an auditable memory.
 
@@ -61,6 +62,8 @@ export interface ExtractResult {
   existing: string[];
   superseded: string[];
   rejected: RejectedItem[];
+  /** Review items opened by this run (cross-source supersessions, possible contradictions). */
+  reviewItems?: number;
   usage?: { inputTokens: number; outputTokens: number; costUsd: number | null };
 }
 
@@ -209,6 +212,7 @@ export async function extractSource(options: ExtractOptions): Promise<ExtractRes
   const created: string[] = [];
   const existing: string[] = [];
   const superseded: string[] = [];
+  let reviewItems = 0;
   store.transaction(() => {
     for (const { record } of accepted) {
       const id = record.kind === "fact" ? record.fact.id : record.decision.id;
@@ -226,6 +230,7 @@ export async function extractSource(options: ExtractOptions): Promise<ExtractRes
         superseded.push(old.id);
       }
     }
+    reviewItems = flagCrossSourceSupersession(store, projectId, superseded) + detectContradictions(store, projectId, created.filter((id) => id.startsWith("fct_")));
     for (const item of rejected) store.memory.insertRejected(projectId, runId, item.reason, item.candidate);
     store.memory.finishRun(runId, {
       status: "ok",
@@ -248,6 +253,7 @@ export async function extractSource(options: ExtractOptions): Promise<ExtractRes
     existing,
     superseded,
     rejected,
+    reviewItems,
     usage: routed.usage,
   };
 }

@@ -64,6 +64,25 @@ export class RoutingRepo {
     );
   }
 
+  /** Totals per routing task. Cost is null when any attempt had unknown pricing. */
+  summary(projectId: string): Array<{ task: string; calls: number; errors: number; inputTokens: number; outputTokens: number; costUsd: number | null }> {
+    return this.db
+      .all(
+        `SELECT task, SUM(outcome = 'ok') AS calls, SUM(outcome = 'error') AS errors, SUM(COALESCE(input_tokens, 0)) AS input_tokens,
+                SUM(COALESCE(output_tokens, 0)) AS output_tokens, SUM(cost_usd) AS cost, SUM(outcome = 'ok' AND cost_usd IS NULL) AS unknown
+         FROM routing_traces WHERE project_id = ? AND outcome <> 'skipped' GROUP BY task ORDER BY task`,
+        projectId,
+      )
+      .map((r) => ({
+        task: String(r.task),
+        calls: Number(r.calls),
+        errors: Number(r.errors),
+        inputTokens: Number(r.input_tokens),
+        outputTokens: Number(r.output_tokens),
+        costUsd: Number(r.unknown) > 0 ? null : Number(r.cost ?? 0),
+      }));
+  }
+
   list(projectId: string, limit = 200): RoutingTraceRecord[] {
     return this.db
       .all("SELECT * FROM routing_traces WHERE project_id = ? ORDER BY rowid DESC LIMIT ?", projectId, limit)
@@ -573,5 +592,96 @@ export class TaskRepo {
       summary: parseJson<unknown>(r.summary, null),
       startedAt: String(r.started_at),
     }));
+  }
+}
+
+// ---- Caches (CL-015) -----------------------------------------------------------
+
+export interface CacheStats {
+  namespace: string;
+  entries: number;
+  bytes: number;
+  hits: number;
+}
+
+/**
+ * Project-scoped key/value cache. Callers build keys from everything that can change
+ * the answer (query, scope, permission and memory revisions); this repo never mixes
+ * projects and never decides validity itself.
+ */
+export class CacheRepo {
+  constructor(private readonly db: Db) {}
+
+  get(projectId: string, namespace: string, key: string): string | undefined {
+    const row = this.db.get("SELECT value FROM cache_entries WHERE project_id = ? AND namespace = ? AND key = ?", projectId, namespace, key);
+    if (row === undefined) return undefined;
+    this.db.run(
+      "UPDATE cache_entries SET hits = hits + 1, last_hit_at = ? WHERE project_id = ? AND namespace = ? AND key = ?",
+      now(),
+      projectId,
+      namespace,
+      key,
+    );
+    return String(row.value);
+  }
+
+  put(projectId: string, namespace: string, key: string, value: string): void {
+    this.db.run(
+      `INSERT INTO cache_entries (project_id, namespace, key, value, bytes, created_at) VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT (project_id, namespace, key) DO UPDATE SET value = excluded.value, bytes = excluded.bytes, created_at = excluded.created_at`,
+      projectId,
+      namespace,
+      key,
+      value,
+      Buffer.byteLength(value, "utf8"),
+      now(),
+    );
+  }
+
+  /** Drop entries for a project (optionally one namespace). Returns the number removed. */
+  clear(projectId: string, namespace?: string): number {
+    return namespace === undefined
+      ? this.db.run("DELETE FROM cache_entries WHERE project_id = ?", projectId).changes
+      : this.db.run("DELETE FROM cache_entries WHERE project_id = ? AND namespace = ?", projectId, namespace).changes;
+  }
+
+  stats(projectId: string): CacheStats[] {
+    return this.db
+      .all(
+        "SELECT namespace, COUNT(*) AS entries, SUM(bytes) AS bytes, SUM(hits) AS hits FROM cache_entries WHERE project_id = ? GROUP BY namespace ORDER BY namespace",
+        projectId,
+      )
+      .map((r) => ({ namespace: String(r.namespace), entries: Number(r.entries), bytes: Number(r.bytes ?? 0), hits: Number(r.hits ?? 0) }));
+  }
+
+  // Transform outputs (CL-016) live next to caches: same project scoping, versioned keys.
+  getTransform(projectId: string, hash: string, transformer: string, version: string): { status: string; output: string; report: unknown } | undefined {
+    const row = this.db.get(
+      "SELECT status, output, report FROM transforms WHERE project_id = ? AND content_hash = ? AND transformer = ? AND version = ?",
+      projectId,
+      hash,
+      transformer,
+      version,
+    );
+    return row === undefined ? undefined : { status: String(row.status), output: String(row.output), report: parseJson<unknown>(row.report, null) };
+  }
+
+  putTransform(projectId: string, input: { hash: string; transformer: string; version: string; status: "transformed" | "fallback"; output: string; report: unknown }): void {
+    this.db.run(
+      `INSERT INTO transforms (project_id, content_hash, transformer, version, status, output, report, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (project_id, content_hash, transformer, version) DO UPDATE SET status = excluded.status, output = excluded.output, report = excluded.report`,
+      projectId,
+      input.hash,
+      input.transformer,
+      input.version,
+      input.status,
+      input.output,
+      json(input.report),
+      now(),
+    );
+  }
+
+  clearTransforms(projectId: string): number {
+    return this.db.run("DELETE FROM transforms WHERE project_id = ?", projectId).changes;
   }
 }

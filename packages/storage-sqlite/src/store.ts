@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -15,12 +15,13 @@ import {
   type SourceInput,
 } from "@ai-plugin-toolkit/core";
 import { Db } from "./db.js";
-import { readEvidenceFile, writeEvidenceFile } from "./evidence-files.js";
+import { readEvidenceFile, resolveEvidencePath, writeEvidenceFile } from "./evidence-files.js";
 import { MemoryRepo } from "./memory-repo.js";
-import { MIGRATIONS, migrate, type Migration } from "./migrations.js";
-import { AcceptanceRepo, ArtifactRepo, RoutingRepo, StateRepo, TaskRepo } from "./repos.js";
+import { MIGRATIONS, currentSchemaVersion, migrate, type Migration } from "./migrations.js";
+import { AcceptanceRepo, ArtifactRepo, CacheRepo, RoutingRepo, StateRepo, TaskRepo } from "./repos.js";
 
 export const DATABASE_FILENAME = "loom.db";
+export const BACKUP_DIR = "backups";
 export const DEFAULT_INLINE_LIMIT_BYTES = 64 * 1024;
 export const DEFAULT_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
@@ -78,6 +79,7 @@ export class LoomStore {
   readonly acceptance: AcceptanceRepo;
   readonly artifacts: ArtifactRepo;
   readonly tasks: TaskRepo;
+  readonly cache: CacheRepo;
   private readonly inlineLimit: number;
   private readonly maxSourceBytes: number;
   private readonly onInsert: ((source: Source) => void) | undefined;
@@ -91,6 +93,7 @@ export class LoomStore {
     this.acceptance = new AcceptanceRepo(this.handle);
     this.artifacts = new ArtifactRepo(this.handle);
     this.tasks = new TaskRepo(this.handle);
+    this.cache = new CacheRepo(this.handle);
     this.storageDir = path.resolve(options.storageDir);
     this.databasePath = databasePath;
     this.inlineLimit = options.inlineLimitBytes ?? DEFAULT_INLINE_LIMIT_BYTES;
@@ -105,7 +108,15 @@ export class LoomStore {
     const db = new DatabaseSync(databasePath);
     try {
       db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;");
-      migrate(db, options.migrations ?? MIGRATIONS);
+      const migrations = options.migrations ?? MIGRATIONS;
+      const from = currentSchemaVersion(db);
+      if (from > 0 && from < migrations.length) {
+        // Recovery point (CL-019): a consistent copy before any pending migration runs.
+        const dir = path.join(storageDir, BACKUP_DIR);
+        await mkdir(dir, { recursive: true });
+        db.prepare("VACUUM INTO ?").run(path.join(dir, `loom-v${from}-${new Date().toISOString().replace(/[:.]/g, "-")}.db`));
+      }
+      migrate(db, migrations);
     } catch (error) {
       db.close();
       throw error;
@@ -284,6 +295,65 @@ export class LoomStore {
       errorCode: r.error_code === null ? null : String(r.error_code),
       changedIds: JSON.parse(String(r.changed_ids)) as string[],
     }));
+  }
+
+  /**
+   * Delete a source row, its index entry and (when no other source shares it) its payload
+   * file. Callers remove derived records first; see memory's forgetSource.
+   */
+  async deleteSource(projectId: string, sourceId: string): Promise<{ payloadRemoved: boolean }> {
+    const source = this.getSource(projectId, sourceId);
+    if (source === undefined) throw new LoomError("NOT_FOUND", `Source ${sourceId} not found in project "${projectId}".`);
+    this.transaction(() => {
+      this.db.prepare("DELETE FROM memory_fts WHERE project_id = ? AND record_id = ?").run(projectId, sourceId);
+      this.db.prepare("DELETE FROM record_sources WHERE project_id = ? AND source_id = ?").run(projectId, sourceId);
+      this.db.prepare("DELETE FROM sources WHERE project_id = ? AND id = ?").run(projectId, sourceId);
+    });
+    let payloadRemoved = false;
+    if (source.content.kind === "file") {
+      const shared = this.db.prepare("SELECT 1 FROM sources WHERE content_path = ?").get(source.content.path);
+      if (shared === undefined) {
+        await rm(resolveEvidencePath(this.storageDir, source.content.path), { force: true });
+        payloadRemoved = true;
+      }
+    }
+    return { payloadRemoved };
+  }
+
+  /**
+   * Rewrite the database file so deleted rows do not survive in free pages or the WAL.
+   * Copies outside this file (backups, exports, OS snapshots) are not affected.
+   */
+  scrub(): void {
+    this.db.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);");
+  }
+
+  /** Backups written before migrations or by `loom db backup`, newest last. */
+  async listBackups(): Promise<string[]> {
+    try {
+      return (await readdir(path.join(this.storageDir, BACKUP_DIR))).filter((f) => f.endsWith(".db")).sort();
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Replace a database file with a backup. Must run while no store is open on it;
+   * the current file is kept next to it as `<name>.before-restore`.
+   */
+  static async restoreBackup(storageDir: string, backupFile: string): Promise<string> {
+    const target = path.join(path.resolve(storageDir), DATABASE_FILENAME);
+    const keep = `${target}.before-restore`;
+    await rm(keep, { force: true });
+    await copyFile(target, keep).catch(() => undefined);
+    for (const suffix of ["-wal", "-shm"]) await rm(`${target}${suffix}`, { force: true });
+    await copyFile(backupFile, target);
+    return keep;
+  }
+
+  /** Consistent copy of the database (used before migrations and by `loom db backup`). */
+  backupTo(file: string): void {
+    this.db.prepare("VACUUM INTO ?").run(file);
   }
 
   /** Append an audit event (operation, actor, changed IDs, result). Never pass secret payloads. */

@@ -2,7 +2,9 @@ import { activePackId, loadBuiltinPack, type TopicPack } from "@ai-plugin-toolki
 import { createBeadsAdapter, type BeadsAdapter } from "@ai-plugin-toolkit/adapter-beads";
 import { LoomError, resolveProjectPath, type ProviderConfig } from "@ai-plugin-toolkit/core";
 import { createAnthropicProvider } from "@ai-plugin-toolkit/provider-anthropic";
-import { Router, fixtureProviderFactory, type ProviderFactory } from "@ai-plugin-toolkit/router";
+import { createOllamaProvider } from "@ai-plugin-toolkit/provider-ollama";
+import { Router, fixtureProviderFactory, hashingEmbedderFactory, type ProviderFactory } from "@ai-plugin-toolkit/router";
+import { permissionsRevision } from "@ai-plugin-toolkit/retrieval";
 import { LoomStore } from "@ai-plugin-toolkit/storage-sqlite";
 import { loadConfigFile, type LoadedConfig } from "./config-file.js";
 
@@ -13,6 +15,10 @@ export interface ProjectContext {
   actor: string;
   env: Readonly<Record<string, string | undefined>>;
   router(): Router;
+  /** Embedding function through routing.embedding, or undefined when no policy is configured. */
+  embedder(): { embed: (texts: readonly string[]) => Promise<{ vectors: number[][]; model: string }>; model: string } | undefined;
+  /** Hash of the access-relevant configuration, used in cache keys. */
+  permissions: string;
   taskAdapter(): BeadsAdapter;
   pack(requested?: string): Promise<TopicPack>;
   activePacks(): Promise<TopicPack[]>;
@@ -29,9 +35,18 @@ const anthropicFactory: ProviderFactory = ({ name, config, apiKey }: { name: str
   });
 };
 
+const ollamaFactory: ProviderFactory = ({ config }) =>
+  createOllamaProvider({
+    ...(config.baseUrl === undefined ? {} : { baseUrl: config.baseUrl }),
+    ...(config.model === undefined ? {} : { model: config.model }),
+    ...(config.embeddingModel === undefined ? {} : { embeddingModel: config.embeddingModel }),
+  });
+
 export const PROVIDER_FACTORIES: Readonly<Record<string, ProviderFactory>> = {
   anthropic: anthropicFactory,
   fixture: fixtureProviderFactory,
+  ollama: ollamaFactory,
+  hashing: hashingEmbedderFactory,
 };
 
 export async function withProject<T>(
@@ -61,6 +76,21 @@ export async function withProject<T>(
         onTrace: (trace) => store.routing.insert(projectId, trace),
       });
       return router;
+    },
+    permissions: permissionsRevision(loaded.config),
+    embedder() {
+      const policy = loaded.config.routing.embedding;
+      if (policy === undefined) return undefined;
+      const primary = loaded.config.providers[policy.providers[0]!];
+      const model = primary?.embeddingModel ?? primary?.model ?? primary?.adapter ?? "unknown";
+      const r = ctx.router();
+      return {
+        model: `${primary?.adapter ?? "?"}:${model}`,
+        embed: async (texts) => {
+          const routed = await r.embed("embedding", texts);
+          return { vectors: routed.value, model: routed.model };
+        },
+      };
     },
     taskAdapter() {
       const tasks = loaded.config.tasks;

@@ -16,6 +16,10 @@ export interface ProjectSnapshot {
   tasks: LocalTask[];
   extraction: { sources: number; runsOk: number; runsFailed: number; rejected: number };
   sync: { adapter: string; lastStatus: string; mapped: number } | undefined;
+  /** Routing totals per task, including background work such as embeddings. */
+  routing: Array<{ task: string; calls: number; errors: number; inputTokens: number; outputTokens: number; costUsd: number | null }>;
+  /** Open review items (possible contradictions, cross-source supersessions). */
+  review: Array<{ id: string; kind: string; detail: string }>;
   /** Exact evidence text for decision records, keyed by decision ID. */
   decisionEvidence: Record<string, ResolvedSpan[]>;
 }
@@ -150,6 +154,8 @@ export function renderStatus(s: ProjectSnapshot): Rendered {
     `- Sources: ${s.extraction.sources}; extraction runs: ${s.extraction.runsOk} ok, ${s.extraction.runsFailed} failed; rejected candidates: ${s.extraction.rejected}`,
     `- Facts: ${s.facts.length} (${s.facts.filter((f) => f.status === "confirmed").length} confirmed by a person)`,
     `- Decisions: ${s.decisions.filter((d) => d.status === "confirmed").length} confirmed, ${s.decisions.filter((d) => d.status === "proposed").length} proposed`,
+    `- Open review items: ${s.review.length}${s.review.length > 0 ? " (`loom review list`)" : ""}`,
+    ...s.review.map((r) => `  - \`${r.id}\` ${r.kind}: ${md(r.detail)}`),
     "",
     "## Acceptance",
     "",
@@ -167,6 +173,12 @@ export function renderStatus(s: ProjectSnapshot): Rendered {
   lines.push(`- Local tasks: ${s.tasks.length} (${s.tasks.filter((t) => t.status === "closed").length} closed upstream)`);
   lines.push(s.sync === undefined ? "- Not synchronized." : `- Synchronized with ${s.sync.adapter}: ${s.sync.mapped} mapped; last run ${s.sync.lastStatus}`);
   lines.push("", "A closed task never counts as verification; see ACCEPTANCE.md for evidence.", "");
+  lines.push("## Model usage and caches", "");
+  if (s.routing.length === 0) lines.push("- No model calls recorded.");
+  for (const r of s.routing) {
+    lines.push(`- ${r.task}: ${r.calls} call(s), ${r.errors} failed attempt(s), ${r.inputTokens} in / ${r.outputTokens} out tokens, cost ${r.costUsd === null ? "unknown (some pricing unavailable)" : `$${r.costUsd.toFixed(4)}`}`);
+  }
+  lines.push("- Background work (embeddings, normalization) is included above under its own task. Cache sizes: `loom cache stats`.", "");
   return { body: lines.join("\n"), sourceIds: [], recordIds: [] };
 }
 
