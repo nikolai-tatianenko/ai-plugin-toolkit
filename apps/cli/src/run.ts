@@ -86,7 +86,7 @@ Acceptance
   report                     Readiness report (--require-ready exits 1 when not ready)
 
 Tasks
-  tasks init                 Create the Beads database configured in tasks.beads.dir
+  tasks init                 Initialize the configured task system (Beads database or .taskmaster/)
   tasks preview              Show the task change set; writes nothing
   tasks sync                 Publish the change set (requires tasks.allowWrites: true)
   tasks list                 Local tasks and their external IDs
@@ -99,7 +99,7 @@ Global options
 Command options
   init:      --project-id <id> --name <name> --dry-run --provider anthropic|ollama|fixture --fixture <path>
              --model <name> --embeddings hashing|ollama
-             --tasks beads --allow-task-writes
+             --tasks beads|taskmaster --allow-task-writes
   ingest:    --type <conversation|document|tool-output> --title <title> --dry-run
   extract:   --source <id> --force
   generate:  --force (replace hand-edited generated sections) --dry-run

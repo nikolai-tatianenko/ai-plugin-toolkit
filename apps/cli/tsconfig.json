@@ -40,6 +40,9 @@
     },
     {
       "path": "../../packages/provider-ollama"
+    },
+    {
+      "path": "../../packages/adapter-taskmaster"
     }
   ]
 }

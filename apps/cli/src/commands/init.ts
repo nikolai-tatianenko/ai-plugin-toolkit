@@ -93,8 +93,8 @@ export async function initCommand(options: InitOptions): Promise<CommandResult> 
     throw new UsageError(`Cannot derive a project ID from "${baseName}". Pass --project-id <id>.`);
   }
 
-  if (options.tasks !== undefined && options.tasks !== "beads") throw new UsageError(`Unknown --tasks "${options.tasks}". Supported: beads.`);
-  if (options.allowTaskWrites && options.tasks === undefined) throw new UsageError("--allow-task-writes requires --tasks beads.");
+  if (options.tasks !== undefined && options.tasks !== "beads" && options.tasks !== "taskmaster") throw new UsageError(`Unknown --tasks "${options.tasks}". Supported: beads, taskmaster.`);
+  if (options.allowTaskWrites && options.tasks === undefined) throw new UsageError("--allow-task-writes requires --tasks beads|taskmaster.");
   // Validates the ID/name through the same schema a config file must satisfy.
   const config = parseConfig({
     $schemaVersion: CONFIG_VERSION,
