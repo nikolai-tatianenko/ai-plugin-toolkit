@@ -99,6 +99,12 @@ export const LoomConfigSchema = z
       })
       .default({ dir: "loom-docs" }),
     tasks: TaskSyncConfigSchema.optional(),
+    mcp: z
+      .strictObject({
+        /** Allow MCP clients to call write tools (answer questions, generate artifacts). Off by default. */
+        allowWrites: z.boolean().default(false),
+      })
+      .default({ allowWrites: false }),
     retention: z
       .strictObject({
         /** Sources older than this (by ingest time) are forgotten by `loom retention apply`. */

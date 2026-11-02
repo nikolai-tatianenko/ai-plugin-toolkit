@@ -266,3 +266,23 @@ describe("database backup and restore (CL-019)", () => {
     expect((await loom(["db", "status", "--json"])).json().data.backups.length).toBeGreaterThan(0);
   });
 });
+
+describe("loom mcp (CL-017, real process over stdio)", () => {
+  it("serves tools to an MCP client and keeps writes disabled by default", async () => {
+    const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
+    const { StdioClientTransport } = await import("@modelcontextprotocol/sdk/client/stdio.js");
+    await prepared();
+    await loom(["extract"]);
+    await loom(["assess", "--pack", "mobile-release"]);
+    const transport = new StdioClientTransport({ command: process.execPath, args: [binPath, "mcp", "--dir", workDir], env: { ...process.env, LOOM_ACTOR: "agent" } as Record<string, string>, stderr: "pipe" });
+    const client = new Client({ name: "workflow-test", version: "1.0.0" });
+    await client.connect(transport);
+    const tools = (await client.listTools()).tools.map((t) => t.name);
+    expect(tools).toEqual(expect.arrayContaining(["loom_search", "loom_context", "loom_answer_question"]));
+    const search = (await client.callTool({ name: "loom_search", arguments: { query: "storage" } })) as { structuredContent: { result: { hits: Array<{ status: string }> } } };
+    expect(search.structuredContent.result.hits[0]!.status).toBe("confirmed");
+    const write = (await client.callTool({ name: "loom_answer_question", arguments: { question: "purchases", value: "no" } })) as { isError: boolean };
+    expect(write.isError).toBe(true);
+    await client.close();
+  }, 30_000);
+});

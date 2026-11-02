@@ -32,6 +32,9 @@
     "@ai-plugin-toolkit/adapter-beads": "workspace:*",
     "@ai-plugin-toolkit/provider-ollama": "workspace:*",
     "@ai-plugin-toolkit/adapter-taskmaster": "workspace:*",
-    "@ai-plugin-toolkit/normalize": "workspace:*"
-  }
+    "@ai-plugin-toolkit/normalize": "workspace:*",
+    "@ai-plugin-toolkit/interface-mcp": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.0"
+  },
+  "devDependencies": {}
 }

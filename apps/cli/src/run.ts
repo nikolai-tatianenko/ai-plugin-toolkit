@@ -13,6 +13,7 @@ import {
   revisionCommand,
 } from "./commands/acceptance.js";
 import { configValidateCommand } from "./commands/config.js";
+import { mcpCommand } from "./commands/mcp.js";
 import {
   correctCommand,
   exportCommand,
@@ -106,6 +107,9 @@ Tasks
   tasks conflicts            Remote edits waiting for a decision
   tasks resolve <task-id>    --keep remote (stop updating it) | --keep local (publish over the edit)
 
+Agents
+  mcp                        MCP server over stdio for this project (read tools; writes if mcp.allowWrites)
+
 Database
   db status | backup         Schema version and backups; write a backup now
   db restore <file> --yes    Replace the database with a backup (previous file kept)
@@ -178,6 +182,7 @@ type Values = { [K in OptionName]?: (typeof OPTIONS)[K]["type"] extends "boolean
 const GLOBAL_OPTIONS: readonly OptionName[] = ["dir", "json", "help", "version"];
 
 interface Invocation {
+  stderr: (text: string) => void;
   rootDir: string;
   cwd: string;
   env: CliIo["env"];
@@ -413,6 +418,7 @@ const COMMANDS: Command[] = [
       return { result, ...(inv.values["require-ready"] && !ready ? { exit: EXIT.failure } : {}) };
     },
   },
+  { words: ["mcp"], args: 0, options: [], usage: "loom mcp", run: (inv) => ok(mcpCommand({ ...base(inv), stderr: inv.stderr })) },
   { words: ["tasks", "init"], args: 0, options: [], usage: "loom tasks init", run: (inv) => ok(tasksInitCommand(base(inv))) },
   { words: ["tasks", "preview"], args: 0, options: [], usage: "loom tasks preview", run: (inv) => ok(tasksPreviewCommand(base(inv))) },
   {
@@ -494,9 +500,11 @@ export async function run(argv: readonly string[], io: CliIo): Promise<ExitCode>
     const [min, max] = typeof command.args === "number" ? [command.args, command.args] : command.args;
     if (args.length < min || args.length > max) throw new UsageError(`Usage: ${command.usage}`);
     rejectUnsupported(command, values);
+    if (command.words[0] === "mcp" && json) throw new UsageError("`loom mcp` speaks MCP on stdout; --json is not supported.");
 
     const outcome = await command.run({
       rootDir: path.resolve(io.cwd, values.dir ?? "."),
+      stderr: io.stderr,
       cwd: io.cwd,
       env: io.env,
       args,
