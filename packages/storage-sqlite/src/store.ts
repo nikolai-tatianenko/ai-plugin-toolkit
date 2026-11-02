@@ -38,6 +38,11 @@ export interface StoreOptions {
   migrations?: readonly Migration[];
   /** Test seam: called inside the ingest transaction after each insert. */
   onInsert?: (source: Source) => void;
+  /**
+   * Open the database read-only (SQLite `readOnly` plus `PRAGMA query_only`). No
+   * migrations or index backfill run; any write fails at the SQLite level.
+   */
+  readOnly?: boolean;
 }
 
 type Row = Record<string, string | number | null>;
@@ -105,6 +110,26 @@ export class LoomStore {
     const storageDir = path.resolve(options.storageDir);
     await mkdir(storageDir, { recursive: true });
     const databasePath = path.join(storageDir, DATABASE_FILENAME);
+    if (options.readOnly) {
+      let ro: DatabaseSync;
+      try {
+        ro = new DatabaseSync(databasePath, { readOnly: true });
+      } catch (cause) {
+        throw new LoomError("NOT_FOUND", `No Loom database at ${databasePath}. Run a write command (e.g. \`loom ingest\`) first.`, { cause });
+      }
+      try {
+        ro.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
+        const version = currentSchemaVersionReadOnly(ro);
+        const expected = (options.migrations ?? MIGRATIONS).length;
+        if (version !== expected) {
+          throw new LoomError("INTERNAL", `Database schema version ${version} does not match this build (${expected}). Run any write command once to migrate.`);
+        }
+      } catch (error) {
+        ro.close();
+        throw error;
+      }
+      return new LoomStore(ro, options, databasePath);
+    }
     const db = new DatabaseSync(databasePath);
     try {
       db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;");
@@ -391,6 +416,12 @@ export class LoomStore {
     }
   }
 
+}
+
+function currentSchemaVersionReadOnly(db: DatabaseSync): number {
+  const table = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'").get();
+  if (table === undefined) return 0;
+  return ((db.prepare("SELECT MAX(version) AS v FROM schema_migrations").get() as { v: number | null }).v ?? 0);
 }
 
 /** Index conversations by their message text rather than JSON keys; other sources as-is. */
