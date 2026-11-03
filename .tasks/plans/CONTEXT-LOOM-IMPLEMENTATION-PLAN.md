@@ -195,15 +195,17 @@ All tickets CL-001 to CL-022 have code in PR #4 (v0.1 to v0.4 plus the release g
 | # | Work | Tickets |
 | --- | --- | --- |
 | 7 | Live model runs: `LOOM_LIVE_TESTS=1 pnpm test` (Claude; Ollama with `LOOM_OLLAMA_MODEL`), `pnpm eval -- --provider anthropic` with a budget | CL-003, CL-015, CL-021 |
-| 8 | Fully local run with Ollama and network access denied (A27) | CL-015 |
+| 8 | Fully local run with a **real** Ollama model (the network-denied workflow already passes against a local stub) | CL-015 |
 | 9 | Human review of `eval/datasets/*` annotations; run baselines and set thresholds | CL-021, CL-016 |
 | 10 | Review of advisory pack items against store, legal and regulatory sources | CL-007, CL-018 |
 | 11 | Manual screen-reader pass of the inspector | CL-020 |
 | 12 | Before any controlled-language compliance claim: obtain and review the authoritative standard | CL-016 |
 
+Decisions recorded on 2026-11-03: the license stays pending (owner will decide later); real Beads/Task Master runs are deferred (the sandbox used for development may not install or run them).
+
 ### 14.3 Known limitations (accepted for 0.4.0, documented)
 
-- No separate linter (TypeScript strict is the gate). `loom` runs from the bundle or the repo; no upward config search.
+- No separate linter (TypeScript strict is the gate).
 - Beads has no compare-and-set; Task Master has no non-AI update (updates reported as unsupported).
 - Contradiction detection is lexical; the hashing embedder is lexical.
 - Forgetting cannot reach backups, exports, git history, upstream systems or provider-side retention.

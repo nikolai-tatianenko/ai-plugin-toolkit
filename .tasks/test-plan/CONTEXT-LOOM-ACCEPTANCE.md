@@ -31,8 +31,8 @@ Status: v0.1 automated suite in place (see the coverage table below). Use synthe
 | A23 | passed | `config.test.ts`, `store.test.ts`, `beads.unit.test.ts` |
 | A24 | passed | `retrieval/test/cache.test.ts`, CLI test |
 | A25 | passed on the 11-case baseline (rules); model path falls back on violations | `normalize/test/normalize.test.ts` |
-| A26 | passed up to `tasks preview`; ingest-to-sync needs real Beads | fresh-clone run, `examples/synthetic/demo.sh` |
-| A27 | supported path exists (Ollama + local embeddings); **not verified** with a real local model and network denied | `provider-ollama` stub tests |
+| A26 | passed up to `tasks preview` (also from the bundled CLI installed on PATH); ingest-to-sync needs real Beads | fresh-clone run, `examples/synthetic/demo.sh`, `pnpm release:check` |
+| A27 | passed with outside network denied (all non-loopback sockets and DNS blocked) using a local Ollama-compatible stub; a real local model run is still pending | `apps/cli/test/local.test.ts` |
 
 The release gate "one real adapter" is **open** until the real Beads suites run. Workflows 4 (correction) and 5 (deletion) are automated in `apps/cli/test/workflow.test.ts`. CI runs on Node 22 and 24.
 
