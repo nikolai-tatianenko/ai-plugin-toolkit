@@ -8,7 +8,13 @@ pnpm build
 pnpm test
 ```
 
-`loom` is not installed on `PATH`. Run it as `node apps/cli/dist/main.js` (the examples below use `alias loom="node $PWD/apps/cli/dist/main.js"`). Every command accepts `--json` and `--dir <project>`.
+To put `loom` on your `PATH`, build the self-contained bundle and install it globally:
+
+```bash
+pnpm bundle && npm install -g ./dist-release/loom
+```
+
+Or run it in place as `node apps/cli/dist/main.js` (e.g. `alias loom="node $PWD/apps/cli/dist/main.js"`). Every command accepts `--json`. Without `--dir`, `loom` uses the nearest directory at or above the current one that contains `loom.config.json`. Set the build revision from git with `loom revision set --from-git`.
 
 ## 1. Offline demo (recorded extraction, no credentials)
 
@@ -129,6 +135,6 @@ loom db backup && loom db status && loom db restore <file> --yes
 ## Limitations (0.4.0)
 
 - Real upstream runs (Beads, Task Master) and live model runs are pending; see plan §14.
-- Fully local operation works with Ollama, but has not been verified with network access denied.
+- Fully local operation (Ollama) is verified with outside network access denied against a local Ollama-compatible stub, not yet against a real Ollama model.
 - Pack items about platform and legal rules are advisory. Normalization makes no compliance claim.
 - MCP and the inspector are local-only.

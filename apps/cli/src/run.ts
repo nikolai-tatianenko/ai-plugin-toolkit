@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { VERSION } from "@ai-plugin-toolkit/core";
@@ -13,6 +14,7 @@ import {
   revisionCommand,
 } from "./commands/acceptance.js";
 import { configValidateCommand } from "./commands/config.js";
+import { findProjectRoot } from "./config-file.js";
 import { mcpCommand } from "./commands/mcp.js";
 import { inspectCommand } from "./commands/inspect.js";
 import {
@@ -96,7 +98,8 @@ Acceptance
   evidence import <file>     Import JUnit XML, loom-build/1 JSON or loom-review/1 Markdown results
   waive <criterion>          Waive with --reason (recorded with actor; never shown as passed)
   accept | reopen <criterion> Record or clear human acceptance
-  revision set <rev> | show  Current source/build revision (older evidence becomes stale)
+  revision set <rev> | show  Current source/build revision (older evidence becomes stale);
+                             --from-git uses the current commit (suffix "-dirty" if uncommitted changes)
   report                     Readiness report (--require-ready exits 1 when not ready)
 
 Tasks
@@ -176,6 +179,7 @@ const OPTIONS = {
   normalize: { type: "boolean", default: false },
   "via-model": { type: "boolean", default: false },
   port: { type: "string" },
+  "from-git": { type: "boolean", default: false },
   file: { type: "string" },
   format: { type: "string" },
 } as const;
@@ -410,7 +414,17 @@ const COMMANDS: Command[] = [
     run: (inv) => ok(dispositionCommand({ ...base(inv), pack: inv.values.pack, action: "accept", criterion: inv.args[0]!, note: inv.values.note })),
   },
   { words: ["reopen"], args: 1, options: ["pack"], usage: "loom reopen <criterion>", run: (inv) => ok(dispositionCommand({ ...base(inv), pack: inv.values.pack, action: "reopen", criterion: inv.args[0]! })) },
-  { words: ["revision", "set"], args: 1, options: [], usage: "loom revision set <rev>", run: (inv) => ok(revisionCommand({ ...base(inv), value: inv.args[0]! })) },
+  {
+    words: ["revision", "set"],
+    args: [0, 1],
+    options: ["from-git"],
+    usage: "loom revision set <rev> | --from-git",
+    run: async (inv) => {
+      if ((inv.args[0] === undefined) === (inv.values["from-git"] !== true)) throw new UsageError("Usage: loom revision set <rev> | --from-git");
+      const value = inv.values["from-git"] ? gitRevision(inv.rootDir) : inv.args[0]!;
+      return ok(revisionCommand({ ...base(inv), value }));
+    },
+  },
   { words: ["revision", "show"], args: 0, options: [], usage: "loom revision show", run: (inv) => ok(revisionCommand(base(inv))) },
   {
     words: ["report"],
@@ -463,6 +477,17 @@ const COMMANDS: Command[] = [
   },
 ];
 
+/** Current git commit of the project (short hash), with "-dirty" when the work tree has changes. */
+function gitRevision(rootDir: string): string {
+  try {
+    const hash = execFileSync("git", ["rev-parse", "--short=12", "HEAD"], { cwd: rootDir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    const dirty = execFileSync("git", ["status", "--porcelain", "--untracked-files=no"], { cwd: rootDir, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim() !== "";
+    return dirty ? `${hash}-dirty` : hash;
+  } catch {
+    throw new UsageError("--from-git needs a git repository with at least one commit (and git on PATH).");
+  }
+}
+
 function rejectUnsupported(command: Command, values: Values): void {
   for (const [name, value] of Object.entries(values)) {
     const isSet = value !== undefined && value !== false;
@@ -514,7 +539,8 @@ export async function run(argv: readonly string[], io: CliIo): Promise<ExitCode>
     if (command.words[0] === "mcp" && json) throw new UsageError("`loom mcp` speaks MCP on stdout; --json is not supported.");
 
     const outcome = await command.run({
-      rootDir: path.resolve(io.cwd, values.dir ?? "."),
+      // --dir is explicit; otherwise search upward from the working directory (init always uses cwd).
+      rootDir: values.dir !== undefined || command.words[0] === "init" ? path.resolve(io.cwd, values.dir ?? ".") : findProjectRoot(io.cwd),
       stderr: io.stderr,
       stdout: io.stdout,
       cwd: io.cwd,
