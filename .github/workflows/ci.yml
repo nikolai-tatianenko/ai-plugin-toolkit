@@ -38,5 +38,27 @@ jobs:
           node apps/cli/dist/main.js --dir "$demo" generate --json | grep -q '"conflicts": 0'
       - name: Extraction evaluation (fixture provider)
         run: pnpm eval
-      - name: Release gate (person-only decisions reported as pending)
-        run: pnpm release:check --allow-pending=license,upstream
+      - name: Release gate (unverified release requirements reported as pending)
+        run: pnpm release:check --allow-pending=license,upstream,live,macos
+
+  macos:
+    name: clean macOS install (node ${{ matrix.node }})
+    runs-on: macos-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Verify clean install and packed CLI workflow
+        run: pnpm verify:release -- macos
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-release-evidence-node-${{ matrix.node }}
+          path: .release-evidence/macos.json
+          if-no-files-found: error

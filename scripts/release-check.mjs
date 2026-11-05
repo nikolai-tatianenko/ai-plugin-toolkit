@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Local release gate (CL-022). Runs every check and prints a checklist. Exit code 0 only
-// when nothing is failing. `--allow-pending license,upstream` downgrades the decisions
-// that only a person can make to warnings (used in CI before the release decision).
+// when nothing is failing. --allow-pending downgrades explicitly named release
+// requirements to pending (used in ordinary CI); only a strict run may print READY.
 // Publishing (repository visibility, package registry) is never done by this script.
 import { execFileSync } from "node:child_process";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
@@ -10,10 +10,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { audit } from "./license-audit.mjs";
 import { scan } from "./secret-scan.mjs";
+import { SUITES, sourceDigest, validateEvidence } from "./release-evidence.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const allowArg = process.argv.find((a) => a.startsWith("--allow-pending"));
 const allowPending = new Set((allowArg?.split("=")[1] ?? (allowArg ? process.argv[process.argv.indexOf(allowArg) + 1] : "") ?? "").split(",").filter(Boolean));
+for (const key of allowPending) {
+  if (!["license", "upstream", "live", "macos"].includes(key)) {
+    console.error(`Unknown pending category: ${key}`);
+    process.exit(2);
+  }
+}
 const results = [];
 const check = (name, fn, { pendingKey } = {}) => {
   try {
@@ -88,11 +95,15 @@ check("bundled CLI works from a clean directory", () => {
     rmSync(work, { recursive: true, force: true });
   }
 });
-check("real upstream adapter runs recorded", () => {
-  const notes = readFileSync(path.join(root, "docs/adapters/beads.md"), "utf8");
-  if (/\*\*not run\*\*/.test(notes)) throw new Error("Beads real-binary suite has not been run (docs/adapters/beads.md)");
-  return "recorded";
-}, { pendingKey: "upstream" });
+const evidenceDir = path.resolve(root, process.env.LOOM_RELEASE_EVIDENCE_DIR ?? ".release-evidence");
+const digest = sourceDigest(root);
+for (const suite of Object.keys(SUITES)) {
+  check(`verified ${suite} evidence`, () => {
+    const file = path.join(evidenceDir, `${suite}.json`);
+    if (!existsSync(file)) throw new Error(`no ${suite} execution evidence; run pnpm verify:release -- ${suite}`);
+    return validateEvidence(JSON.parse(readFileSync(file, "utf8")), suite, digest);
+  }, { pendingKey: ["beads", "taskmaster"].includes(suite) ? "upstream" : suite === "macos" ? "macos" : "live" });
+}
 
 const icon = { pass: "✓", pending: "…", fail: "✗" };
 console.log("Release checks");
@@ -103,5 +114,5 @@ console.log("  - confirm the package/product name (npm view <name>) and trademar
 console.log("  - change repository visibility; publish the package (npm publish from dist-release/loom)");
 const failed = results.filter((r) => r.status === "fail");
 const pending = results.filter((r) => r.status === "pending");
-console.log(`\n${failed.length === 0 ? (pending.length === 0 ? "READY" : `READY EXCEPT ${pending.length} PENDING DECISION(S)`) : `NOT READY: ${failed.length} failing`}`);
+console.log(`\n${failed.length === 0 ? (pending.length === 0 ? "READY" : `PENDING: ${pending.length} release requirement(s) outstanding`) : `NOT READY: ${failed.length} failing`}`);
 process.exitCode = failed.length === 0 ? 0 : 1;

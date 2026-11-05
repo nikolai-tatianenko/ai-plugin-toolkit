@@ -6,6 +6,11 @@ All notable changes. Versions follow the plan's milestones. Nothing has been pub
 
 Release candidate covering milestones v0.1 to v0.4. The release gate (CL-022) still needs a license decision, the real-upstream adapter runs, and explicitly authorized publication. Run `pnpm release:check`.
 
+### Release verification follow-up
+- Require source-bound execution receipts for Beads, Task Master, real Claude/Ollama extraction, and clean macOS installation. Missing or skipped verification cannot produce READY.
+- Add `pnpm verify:release -- <suite>`, real extraction workflows with provenance checks, and macOS Node 22/24 CI artifacts.
+- Cover fetch transports and normalized socket arguments in the local-only workflow's network guard.
+
 ### v0.4
 - Two-way task reconciliation: `loom tasks pull`, `tasks conflicts`, `tasks resolve --keep local|remote`. Remote edits are preserved for a decision, and status is owned by the task system. A sync lock prevents concurrent runs (CL-019).
 - Database recovery: automatic backup before schema migrations; `loom db status|backup|restore` (CL-019).

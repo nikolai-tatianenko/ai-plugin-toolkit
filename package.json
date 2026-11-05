@@ -14,6 +14,7 @@
     "eval": "node apps/eval/dist/main.js",
     "bundle": "node scripts/bundle-cli.mjs",
     "release:check": "node scripts/release-check.mjs",
+    "verify:release": "node scripts/verify-release.mjs",
     "licenses:audit": "node scripts/license-audit.mjs",
     "secrets:scan": "node scripts/secret-scan.mjs"
   },
