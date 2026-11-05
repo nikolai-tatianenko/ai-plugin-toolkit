@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "description": "Hand-written stand-in for model output on extraction-v1. It deliberately contains one claim copied from an injected instruction and one invented quote, so the harness shows what validation catches and what only evaluation catches.",
+  "responses": [
+    {
+      "match": "We are building a habit tracker for iOS and Android.",
+      "json": {
+        "items": [
+          { "type": "goal", "statement": "The product is a habit tracker for iOS and Android.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "We are building a habit tracker for iOS and Android." }] },
+          { "type": "constraint", "statement": "The first release is free and has no purchases.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "First release is free, no purchases." }] },
+          { "type": "proposal", "statement": "PostgreSQL with a hosted backend was suggested.", "topic": "storage", "choice": "PostgreSQL", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "PostgreSQL is one option if you want a hosted backend." }] },
+          { "type": "decision", "statement": "Data stays on device in SQLite.", "topic": "storage", "choice": "On-device SQLite", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Decision: keep everything on device in SQLite." }] },
+          { "type": "requirement", "statement": "Reminders must work offline.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "reminders must work offline" }] },
+          { "type": "requirement", "statement": "The app supports Dynamic Type and TalkBack.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "support Dynamic Type and TalkBack" }] }
+        ]
+      }
+    },
+    {
+      "match": "For sign-in, let's use Firebase Auth.",
+      "json": {
+        "items": [
+          { "type": "decision", "statement": "Sign-in uses Firebase Auth.", "topic": "auth", "choice": "Firebase Auth", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "let's use Firebase Auth" }] },
+          { "type": "proposal", "statement": "Supabase Auth was mentioned as an alternative.", "topic": "auth", "choice": "Supabase Auth", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Supabase Auth is an alternative" }] },
+          { "type": "decision", "statement": "Sign-in uses Supabase Auth instead of Firebase.", "topic": "auth", "choice": "Supabase Auth", "alternatives": ["Firebase Auth"], "evidence": [{ "sourceId": "{{sourceId}}", "quote": "we will use Supabase Auth instead of Firebase" }] },
+          { "type": "requirement", "statement": "Users can delete their account in settings.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Users can delete their account in settings." }] }
+        ]
+      }
+    },
+    {
+      "match": "Maybe we should add a dark mode later.",
+      "json": {
+        "items": [
+          { "type": "proposal", "statement": "Dark mode was suggested for later.", "topic": "theme", "choice": "Dark mode", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Maybe we should add a dark mode later." }] },
+          { "type": "requirement", "statement": "CSV export is required for the first release.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Export to CSV is required for the first release." }] },
+          { "type": "event", "statement": "All tests passed.", "evidence": [{ "sourceId": "{{sourceId}}", "quote": "all tests passed" }] }
+        ]
+      }
+    }
+  ]
+}

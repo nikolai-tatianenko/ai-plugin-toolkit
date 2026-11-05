@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "description": "Recorded extraction output for the synthetic kickoff conversation. Hand-written to match what a well-behaved model should return; it exercises validation and storage, not model quality.",
+  "responses": [
+    {
+      "match": "We are building a habit tracker for iOS and Android.",
+      "json": {
+        "items": [
+          {
+            "type": "goal",
+            "statement": "The product is a habit tracker for iOS and Android.",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "We are building a habit tracker for iOS and Android." }]
+          },
+          {
+            "type": "constraint",
+            "statement": "The first release is free and has no purchases.",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "First release is free, no purchases." }]
+          },
+          {
+            "type": "proposal",
+            "statement": "The assistant suggested PostgreSQL with a hosted backend for storage.",
+            "topic": "storage",
+            "choice": "PostgreSQL with a hosted backend",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "PostgreSQL is one option if you want a hosted backend." }]
+          },
+          {
+            "type": "constraint",
+            "statement": "Version 1 has no backend.",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "No backend for v1." }]
+          },
+          {
+            "type": "decision",
+            "statement": "All data is kept on the device in SQLite.",
+            "topic": "storage",
+            "choice": "On-device SQLite",
+            "alternatives": ["PostgreSQL with a hosted backend"],
+            "rationale": "No backend for v1.",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Decision: keep everything on device in SQLite." }]
+          },
+          {
+            "type": "requirement",
+            "statement": "Reminders must work offline.",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "reminders must work offline" }]
+          },
+          {
+            "type": "requirement",
+            "statement": "The app supports Dynamic Type and TalkBack.",
+            "evidence": [{ "sourceId": "{{sourceId}}", "quote": "Accessibility: support Dynamic Type and TalkBack." }]
+          }
+        ]
+      }
+    }
+  ]
+}

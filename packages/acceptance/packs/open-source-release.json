@@ -1,0 +1,342 @@
+{
+  "format": "loom-pack/1",
+  "id": "open-source-release",
+  "version": "0.1.0",
+  "title": "Open-source release",
+  "description": "Readiness for publishing a repository or package as open source: license, dependency licenses, secrets, security policy, contribution guide, reproducible build, documentation and package metadata.",
+  "advisory": "Engineering checklist. License compatibility and export-control questions need review by someone qualified; nothing here is legal advice.",
+  "topics": [
+    {
+      "id": "license",
+      "title": "Licensing"
+    },
+    {
+      "id": "security",
+      "title": "Security and secrets"
+    },
+    {
+      "id": "community",
+      "title": "Community files"
+    },
+    {
+      "id": "build",
+      "title": "Build and CI"
+    },
+    {
+      "id": "docs",
+      "title": "Documentation"
+    },
+    {
+      "id": "package",
+      "title": "Package publication"
+    }
+  ],
+  "questions": [
+    {
+      "id": "publishes-package",
+      "topic": "package",
+      "text": "Will this release publish a package to a registry (npm, PyPI, \u2026)?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "npm",
+        "package",
+        "registry",
+        "publish"
+      ]
+    },
+    {
+      "id": "accepts-contributions",
+      "topic": "community",
+      "text": "Will outside contributions be accepted?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "contribution",
+        "contributors",
+        "pull request"
+      ]
+    },
+    {
+      "id": "ships-binaries",
+      "topic": "build",
+      "text": "Does the release ship prebuilt binaries?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "binary",
+        "binaries",
+        "release assets"
+      ]
+    },
+    {
+      "id": "handles-user-data",
+      "topic": "security",
+      "text": "Does the software process personal or sensitive data?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "personal",
+        "privacy",
+        "data"
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "license.chosen",
+      "topic": "license",
+      "title": "A license is chosen and present",
+      "expected": "LICENSE file at the root names an OSI-approved license chosen by the copyright holder; package metadata uses the same SPDX identifier.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Human review of LICENSE and package metadata.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Choose and add a license",
+        "description": "The copyright holder chooses a license; add LICENSE and matching SPDX identifiers."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "license"
+        ]
+      }
+    },
+    {
+      "id": "license.dependencies",
+      "topic": "license",
+      "title": "Dependency licenses are compatible",
+      "expected": "Every runtime dependency's license is known and compatible with the chosen license; the audit output is kept.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Automated license audit in CI plus review of exceptions.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Audit dependency licenses",
+        "description": "Run the dependency license audit; resolve unknown or incompatible licenses."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "licen[cs]e.?audit",
+          "dependency.?licen"
+        ]
+      }
+    },
+    {
+      "id": "security.no-secrets",
+      "topic": "security",
+      "title": "No secrets or private data in the repository",
+      "expected": "A secret scan of the full history finds no credentials, keys or private data.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Secret scan over tracked files and history.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Scan the repository for secrets",
+        "description": "Run a secret scan over tracked files and history; rotate anything found."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "secret"
+        ]
+      }
+    },
+    {
+      "id": "security.policy",
+      "topic": "security",
+      "title": "Security policy published",
+      "expected": "SECURITY.md explains how to report vulnerabilities privately and what is supported.",
+      "severity": "major",
+      "verification": {
+        "method": "Human review.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Write SECURITY.md",
+        "description": "Document private vulnerability reporting and supported versions."
+      }
+    },
+    {
+      "id": "security.data-handling",
+      "topic": "security",
+      "title": "Data handling documented",
+      "expected": "Documentation states what data is stored, where, and how to delete it.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "handles-user-data",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Human review of documentation.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Document data handling",
+        "description": "Describe storage locations, retention and deletion."
+      }
+    },
+    {
+      "id": "community.contributing",
+      "topic": "community",
+      "title": "Contribution guide",
+      "expected": "CONTRIBUTING.md explains setup, checks to run and the review process.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "accepts-contributions",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Human review.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Write CONTRIBUTING.md",
+        "description": "Explain setup, required checks and the review process."
+      }
+    },
+    {
+      "id": "build.clean-checkout",
+      "topic": "build",
+      "title": "Clean checkout builds and tests pass",
+      "expected": "A fresh clone installs with a frozen lockfile, builds and passes tests in CI.",
+      "severity": "blocker",
+      "verification": {
+        "method": "CI run on a clean checkout.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Verify a clean-checkout build in CI",
+        "description": "Run install, build and tests from a fresh clone in CI."
+      },
+      "evidence": {
+        "junit": [
+          ".*"
+        ],
+        "checks": [
+          "build",
+          "test"
+        ]
+      }
+    },
+    {
+      "id": "build.reproducible-binaries",
+      "topic": "build",
+      "title": "Binaries are built in CI from a tagged revision",
+      "expected": "Release binaries are produced by CI from a tag, with checksums published.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "ships-binaries",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "CI release job output.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Build release binaries in CI",
+        "description": "Produce binaries from a tag in CI and publish checksums."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "release"
+        ]
+      }
+    },
+    {
+      "id": "docs.quickstart",
+      "topic": "docs",
+      "title": "Quickstart works as written",
+      "expected": "A person following the README/quickstart on a clean machine reaches a working result.",
+      "severity": "major",
+      "verification": {
+        "method": "Manual walkthrough on a clean machine.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Walk through the quickstart on a clean machine",
+        "description": "Follow the documented steps exactly and fix any gap."
+      }
+    },
+    {
+      "id": "docs.limitations",
+      "topic": "docs",
+      "title": "Limitations documented",
+      "expected": "Known limitations and unsupported cases are listed honestly.",
+      "severity": "minor",
+      "verification": {
+        "method": "Human review.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Document limitations",
+        "description": "List known limitations and unsupported cases."
+      }
+    },
+    {
+      "id": "package.metadata",
+      "topic": "package",
+      "title": "Package metadata complete",
+      "expected": "Name availability checked; name, version, license, repository, description and files list are correct; a dry-run pack contains only intended files.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "publishes-package",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Dry-run pack plus human review.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Check package metadata and contents",
+        "description": "Check name availability, metadata and a dry-run pack's file list."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "pack",
+          "publish.?dry"
+        ]
+      }
+    }
+  ]
+}

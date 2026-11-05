@@ -8,7 +8,7 @@ describe("redaction", () => {
   });
 
   it("redacts key-shaped values in free text", () => {
-    const text = redactString("failed with sk-ant-api03-abcdefghijklmnopqrstuvwx and ghp_abcdefghijklmnopqrstuvwxyz0123");
+    const text = redactString("failed with sk-ant-api03-abcdefghijklmnopqrstuvwx and ghp_abcdefghijklmnopqrstuvwxyz0123"); // secret-scan: synthetic
     expect(text).not.toMatch(/sk-ant|ghp_/);
     expect(text.match(/\[REDACTED\]/g)).toHaveLength(2);
   });

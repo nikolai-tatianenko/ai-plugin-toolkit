@@ -25,13 +25,18 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for inspector browser tests
+        run: pnpm --filter @ai-plugin-toolkit/inspector exec playwright install --with-deps chromium
       - run: pnpm build
       - run: pnpm test
-      - name: CLI smoke test from a clean checkout
+      - name: Offline end-to-end demo from a clean checkout
+        run: bash examples/synthetic/demo.sh "$RUNNER_TEMP/loom-demo"
+      - name: Rerun is idempotent
         run: |
           demo="$RUNNER_TEMP/loom-demo"
-          node apps/cli/dist/main.js init --dir "$demo" --project-id ci-smoke --json
-          node apps/cli/dist/main.js config validate --dir "$demo"
-          node apps/cli/dist/main.js ingest --dir "$demo" examples/synthetic/kickoff-conversation.json
-          node apps/cli/dist/main.js ingest --dir "$demo" examples/synthetic/kickoff-conversation.json --json | grep -q '"existing": 1'
-          node apps/cli/dist/main.js sources list --dir "$demo"
+          node apps/cli/dist/main.js --dir "$demo" ingest examples/synthetic/kickoff-conversation.json --json | grep -q '"existing": 1'
+          node apps/cli/dist/main.js --dir "$demo" generate --json | grep -q '"conflicts": 0'
+      - name: Extraction evaluation (fixture provider)
+        run: pnpm eval
+      - name: Release gate (person-only decisions reported as pending)
+        run: pnpm release:check --allow-pending=license,upstream

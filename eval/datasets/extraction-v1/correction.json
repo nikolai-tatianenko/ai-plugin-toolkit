@@ -1,0 +1,10 @@
+{
+  "title": "Synthetic: auth provider correction",
+  "createdAt": "2026-10-03T09:00:00Z",
+  "messages": [
+    { "role": "user", "content": "For sign-in, let's use Firebase Auth." },
+    { "role": "assistant", "content": "Firebase Auth works. Supabase Auth is an alternative if you prefer Postgres." },
+    { "role": "user", "content": "Correction: we will use Supabase Auth instead of Firebase." },
+    { "role": "user", "content": "Users must be able to delete their account from the settings screen." }
+  ]
+}

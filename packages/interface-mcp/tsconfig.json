@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../core"
+    },
+    {
+      "path": "../storage-sqlite"
+    },
+    {
+      "path": "../memory"
+    },
+    {
+      "path": "../retrieval"
+    },
+    {
+      "path": "../acceptance"
+    },
+    {
+      "path": "../artifacts"
+    },
+    {
+      "path": "../task-sync"
+    }
+  ]
+}

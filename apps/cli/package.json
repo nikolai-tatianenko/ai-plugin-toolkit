@@ -1,6 +1,6 @@
 {
   "name": "@ai-plugin-toolkit/cli",
-  "version": "0.0.0",
+  "version": "0.4.0",
   "private": true,
   "description": "Command-line interface for Context Loom (working name).",
   "type": "module",
@@ -21,6 +21,23 @@
   },
   "dependencies": {
     "@ai-plugin-toolkit/core": "workspace:*",
-    "@ai-plugin-toolkit/storage-sqlite": "workspace:*"
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/router": "workspace:*",
+    "@ai-plugin-toolkit/provider-anthropic": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*",
+    "@ai-plugin-toolkit/retrieval": "workspace:*",
+    "@ai-plugin-toolkit/acceptance": "workspace:*",
+    "@ai-plugin-toolkit/artifacts": "workspace:*",
+    "@ai-plugin-toolkit/task-sync": "workspace:*",
+    "@ai-plugin-toolkit/adapter-beads": "workspace:*",
+    "@ai-plugin-toolkit/provider-ollama": "workspace:*",
+    "@ai-plugin-toolkit/adapter-taskmaster": "workspace:*",
+    "@ai-plugin-toolkit/normalize": "workspace:*",
+    "@ai-plugin-toolkit/interface-mcp": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "@ai-plugin-toolkit/inspector": "workspace:*"
+  },
+  "devDependencies": {
+    "@ai-plugin-toolkit/router": "workspace:*"
   }
 }

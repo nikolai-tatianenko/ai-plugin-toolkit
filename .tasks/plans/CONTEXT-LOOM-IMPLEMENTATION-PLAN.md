@@ -1,6 +1,6 @@
 # Context Loom implementation plan
 
-Status: proposed; implementation not started. Repository name remains ai-plugin-toolkit. Working product name is not finalized.
+Status: v0.1–v0.4 and the release gate implemented in review (PR #4, see [tickets](../tickets/README.md)); real upstream runs, the license decision and publication pending. What is left: [§14](#14-remaining-work-as-of-2026-11-02). Repository name remains ai-plugin-toolkit. Working product name is not finalized.
 
 ## 1. End-to-end behavior
 
@@ -174,6 +174,42 @@ Compare full-history and simple retrieval baselines using the same model and dat
 Choose license, check naming/package availability and dependency licenses, create CONTRIBUTING and SECURITY documentation, provide a clean-machine quickstart and synthetic demo, establish CI and a compatibility matrix, and publish honest limitations. Add short architecture decisions for SQLite, plugin contracts, evidence lifecycle, and sync ownership.
 
 Repository publication, package publication, hosting, and production credentials are final release activities after local gates pass. This planning change does not authorize changing visibility or publishing packages.
+
+## 14. Remaining work (as of 2026-11-02)
+
+All tickets CL-001 to CL-022 have code in PR #4 (v0.1 to v0.4 plus the release gate). What remains needs either a real upstream binary, credentials, or an owner decision. Nothing below can be closed by more code alone.
+
+### 14.1 To finish (required)
+
+| # | Work | Tickets | How |
+| --- | --- | --- | --- |
+| 1 | Run the real Beads suites (A14–A17 against `bd` 1.3.x, CLI publish/rerun) and record results | CL-011, CL-012 | install `bd` 1.3.x, `pnpm test` |
+| 2 | Run the real Task Master suite against `task-master` 0.43.x and record results | CL-014 | install `task-master-ai@0.43.x`, `pnpm test` |
+| 3 | Fix any incompatibilities found in 1–2 | CL-011, CL-014 | — |
+| 4 | Choose the license and add LICENSE; confirm the name (npm: `context-loom` not taken on 2026-11-02; trademark search pending) | CL-022 | owner decision, see docs/release.md |
+| 5 | `pnpm release:check` prints READY with no `--allow-pending` | CL-022 | after 1–4 |
+| 6 | Review and merge PR #4; tag v0.4.0; then (separately authorised) change visibility and publish | CL-022 | manual |
+
+### 14.2 Strongly recommended
+
+| # | Work | Tickets |
+| --- | --- | --- |
+| 7 | Live model runs: `LOOM_LIVE_TESTS=1 pnpm test` (Claude; Ollama with `LOOM_OLLAMA_MODEL`), `pnpm eval -- --provider anthropic` with a budget | CL-003, CL-015, CL-021 |
+| 8 | Fully local run with a **real** Ollama model (the network-denied workflow already passes against a local stub) | CL-015 |
+| 9 | Human review of `eval/datasets/*` annotations; run baselines and set thresholds | CL-021, CL-016 |
+| 10 | Review of advisory pack items against store, legal and regulatory sources | CL-007, CL-018 |
+| 11 | Manual screen-reader pass of the inspector | CL-020 |
+| 12 | Before any controlled-language compliance claim: obtain and review the authoritative standard | CL-016 |
+
+Decisions recorded on 2026-11-03: the license stays pending (owner will decide later); real Beads/Task Master runs are deferred (the sandbox used for development may not install or run them).
+
+### 14.3 Known limitations (accepted for 0.4.0, documented)
+
+- No separate linter (TypeScript strict is the gate).
+- Beads has no compare-and-set; Task Master has no non-AI update (updates reported as unsupported).
+- Contradiction detection is lexical; the hashing embedder is lexical.
+- Forgetting cannot reach backups, exports, git history, upstream systems or provider-side retention.
+- MCP and inspector are local-only; multi-user hosting needs an authorization design.
 
 ## References and status
 

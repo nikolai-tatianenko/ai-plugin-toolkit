@@ -49,18 +49,29 @@ export async function ingestCommand(options: IngestOptions): Promise<CommandResu
   }
 
   if (options.dryRun) {
-    const planned = inputs.map((input) => ({
-      file: input.label,
-      id: stableId("source", projectId, contentHash(input.text)),
-      type: input.type,
-      title: input.title,
-      bytes: Buffer.byteLength(input.text, "utf8"),
-    }));
+    // Read-only check of what already exists; a missing database simply means "nothing yet".
+    let existing = new Set<string>();
+    try {
+      const ro = await LoomStore.open({ storageDir: loaded.storageDir, readOnly: true });
+      try {
+        existing = new Set(
+          inputs.map((i) => stableId("source", projectId, contentHash(i.text))).filter((id) => ro.getSource(projectId, id) !== undefined),
+        );
+      } finally {
+        ro.close();
+      }
+    } catch {
+      existing = new Set();
+    }
+    const planned = inputs.map((input) => {
+      const id = stableId("source", projectId, contentHash(input.text));
+      return { file: input.label, id, type: input.type, title: input.title, bytes: Buffer.byteLength(input.text, "utf8"), status: existing.has(id) ? "existing" : "new" };
+    });
     return {
-      data: { dryRun: true, projectId, sources: planned },
+      data: { dryRun: true, projectId, sources: planned, new: planned.filter((p) => p.status === "new").length, existing: existing.size },
       lines: [
-        `Would ingest ${planned.length} file(s) into "${projectId}" (duplicates are not checked in dry run):`,
-        ...planned.map((p) => `  + ${p.id}  ${p.type}  ${p.file}`),
+        `Would ingest ${planned.length} file(s) into "${projectId}": ${planned.filter((p) => p.status === "new").length} new, ${existing.size} already present`,
+        ...planned.map((p) => `  ${p.status === "new" ? "+" : "="} ${p.id}  ${p.type}  ${p.file}`),
       ],
     };
   }

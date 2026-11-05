@@ -7,14 +7,20 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node packages/inspector/build-ui.mjs",
     "clean": "tsc -b --clean",
     "test": "vitest run",
-    "check": "pnpm build && pnpm test"
+    "check": "pnpm build && pnpm test",
+    "eval": "node apps/eval/dist/main.js",
+    "bundle": "node scripts/bundle-cli.mjs",
+    "release:check": "node scripts/release-check.mjs",
+    "licenses:audit": "node scripts/license-audit.mjs",
+    "secrets:scan": "node scripts/secret-scan.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
     "typescript": "6.0.3",
-    "vitest": "5.0.5"
+    "vitest": "5.0.5",
+    "esbuild": "0.28.2"
   }
 }

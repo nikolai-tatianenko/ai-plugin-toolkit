@@ -1,0 +1,642 @@
+{
+  "format": "loom-pack/1",
+  "id": "mobile-release",
+  "version": "0.1.1",
+  "title": "Mobile app release",
+  "description": "Readiness criteria for a first release of an iOS and/or Android app: devices, onboarding, accounts, offline behaviour, notifications, purchases, ads and age, privacy and deletion, accessibility, errors, store assets and release evidence.",
+  "advisory": "Engineering checklist written for this project. Platform and legal items (account deletion, privacy disclosures, children, ads) have NOT been reviewed against current Apple App Store, Google Play or legal sources; confirm them with authoritative documentation before treating them as mandatory rules.",
+  "topics": [
+    {
+      "id": "devices",
+      "title": "Platforms and devices"
+    },
+    {
+      "id": "onboarding",
+      "title": "Onboarding"
+    },
+    {
+      "id": "auth",
+      "title": "Accounts and authentication"
+    },
+    {
+      "id": "offline",
+      "title": "Offline behaviour"
+    },
+    {
+      "id": "notifications",
+      "title": "Notifications and reminders"
+    },
+    {
+      "id": "purchases",
+      "title": "Purchases and restore"
+    },
+    {
+      "id": "ads-age",
+      "title": "Ads and age"
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy and deletion"
+    },
+    {
+      "id": "accessibility",
+      "title": "Accessibility"
+    },
+    {
+      "id": "errors",
+      "title": "Error handling and stability"
+    },
+    {
+      "id": "store",
+      "title": "Store assets"
+    },
+    {
+      "id": "release",
+      "title": "Build and release evidence"
+    }
+  ],
+  "questions": [
+    {
+      "id": "platforms",
+      "topic": "devices",
+      "text": "Which platforms does this release target?",
+      "impact": "high",
+      "answer": {
+        "type": "choice",
+        "options": [
+          "ios",
+          "android",
+          "both"
+        ]
+      },
+      "hints": [
+        "ios",
+        "android",
+        "platform",
+        "iphone"
+      ]
+    },
+    {
+      "id": "accounts",
+      "topic": "auth",
+      "text": "Do users sign in or create an account?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "login",
+        "sign",
+        "account",
+        "authentication",
+        "password"
+      ]
+    },
+    {
+      "id": "purchases",
+      "topic": "purchases",
+      "text": "Does this release include in-app purchases or subscriptions?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "purchase",
+        "purchases",
+        "subscription",
+        "paid",
+        "free",
+        "payment"
+      ]
+    },
+    {
+      "id": "ads",
+      "topic": "ads-age",
+      "text": "Does the app show advertising?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "ads",
+        "advertising",
+        "admob"
+      ]
+    },
+    {
+      "id": "children",
+      "topic": "ads-age",
+      "text": "Is the app directed at children?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "children",
+        "kids",
+        "age"
+      ]
+    },
+    {
+      "id": "personal-data",
+      "topic": "privacy",
+      "text": "Does the app collect or store personal data (including health or habit data)?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "personal",
+        "privacy",
+        "analytics",
+        "tracking",
+        "data"
+      ]
+    },
+    {
+      "id": "remote-data",
+      "topic": "privacy",
+      "text": "Does the app send user data to a server or third-party service?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "backend",
+        "server",
+        "sync",
+        "cloud",
+        "api"
+      ]
+    },
+    {
+      "id": "offline",
+      "topic": "offline",
+      "text": "Must the core features work without a network connection?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "offline",
+        "network",
+        "connectivity"
+      ]
+    },
+    {
+      "id": "notifications",
+      "topic": "notifications",
+      "text": "Does the app send notifications or reminders?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "notification",
+        "notifications",
+        "reminder",
+        "reminders",
+        "push"
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "devices.ios-physical",
+      "topic": "devices",
+      "title": "Smoke test on a physical iOS device",
+      "expected": "The release build installs and the main flows complete on at least one physical iPhone running the minimum supported iOS version.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "platforms",
+        "in": [
+          "ios",
+          "both"
+        ]
+      },
+      "verification": {
+        "method": "Manual smoke test on a physical device, recording device model, OS version and build revision.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Smoke-test the release build on a physical iOS device",
+        "description": "Install the release build on a physical iPhone at the minimum supported iOS version and run the main flows. Record device, OS version and build revision as evidence."
+      },
+      "dependsOn": [
+        "release.signed-build"
+      ]
+    },
+    {
+      "id": "devices.android-physical",
+      "topic": "devices",
+      "title": "Smoke test on a physical Android device",
+      "expected": "The release build installs and the main flows complete on at least one physical Android device at the minimum supported API level.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "platforms",
+        "in": [
+          "android",
+          "both"
+        ]
+      },
+      "verification": {
+        "method": "Manual smoke test on a physical device, recording device model, Android version and build revision.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Smoke-test the release build on a physical Android device",
+        "description": "Install the release build on a physical Android device at the minimum supported API level and run the main flows. Record device, OS version and build revision as evidence."
+      },
+      "dependsOn": [
+        "release.signed-build"
+      ]
+    },
+    {
+      "id": "onboarding.first-run",
+      "topic": "onboarding",
+      "title": "First-run onboarding can be completed or skipped",
+      "expected": "A fresh install shows onboarding that can be completed or skipped, and does not reappear after completion.",
+      "severity": "major",
+      "verification": {
+        "method": "UI test or manual run from a clean install.",
+        "environments": [
+          "physical-device",
+          "emulator",
+          "simulator",
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Verify first-run onboarding",
+        "description": "From a clean install, complete and separately skip onboarding; confirm it does not reappear after completion."
+      },
+      "evidence": {
+        "junit": [
+          "onboarding"
+        ],
+        "checks": []
+      }
+    },
+    {
+      "id": "auth.sign-in-out",
+      "topic": "auth",
+      "title": "Sign-in, sign-out and access recovery work",
+      "expected": "Users can create an account or sign in, sign out, and recover access (for example password reset).",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "accounts",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Integration or UI test against a non-production identity backend.",
+        "environments": [
+          "physical-device",
+          "emulator",
+          "simulator",
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Verify sign-in, sign-out and access recovery",
+        "description": "Exercise account creation/sign-in, sign-out and recovery against a non-production backend."
+      }
+    },
+    {
+      "id": "auth.account-deletion",
+      "topic": "auth",
+      "title": "Account deletion is available in the app",
+      "expected": "A signed-in user can start deletion of their account and associated data from inside the app. (Advisory: confirm current store rules.)",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "accounts",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Manual check on a device plus confirmation that server-side data is removed.",
+        "environments": [
+          "physical-device",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Provide and verify in-app account deletion",
+        "description": "Implement or confirm an in-app path to delete the account and its data, and verify the server-side removal."
+      }
+    },
+    {
+      "id": "offline.core-flows",
+      "topic": "offline",
+      "title": "Core flows work offline on a physical device",
+      "expected": "With network disabled (airplane mode), core flows work and data entered offline is kept.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "offline",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Manual test in airplane mode on a physical device; emulator network toggles do not count.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Verify core flows in airplane mode on a physical device",
+        "description": "Disable all networking on a physical device, run the core flows, relaunch, and confirm data is kept."
+      }
+    },
+    {
+      "id": "notifications.delivery",
+      "topic": "notifications",
+      "title": "Notification permission and reminder delivery",
+      "expected": "Permission is requested in context, denial is handled, and scheduled reminders fire while the app is closed.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "notifications",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Manual test on a physical device with the app terminated; record OS power-saving settings.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Verify notification permission handling and reminder delivery",
+        "description": "On a physical device, test grant and denial of notification permission and confirm reminders fire while the app is closed."
+      }
+    },
+    {
+      "id": "purchases.flow",
+      "topic": "purchases",
+      "title": "Purchase flow completes in the store sandbox",
+      "expected": "Each product can be bought in the store sandbox and unlocks the right content.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "purchases",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Sandbox purchase on a physical device with a test account.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Verify sandbox purchases for every product",
+        "description": "Buy each product with a sandbox test account on a physical device and confirm entitlement."
+      }
+    },
+    {
+      "id": "purchases.restore",
+      "topic": "purchases",
+      "title": "Restore purchases works after reinstall",
+      "expected": "After reinstalling or switching devices, restore brings back every previous purchase.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "purchases",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Reinstall on a physical device and restore with the same sandbox account.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Verify restore purchases after reinstall",
+        "description": "Reinstall the app (or use a second device), restore purchases with the same sandbox account, and confirm entitlements."
+      },
+      "dependsOn": [
+        "purchases.flow"
+      ]
+    },
+    {
+      "id": "ads-age.ad-settings",
+      "topic": "ads-age",
+      "title": "Ads respect consent and age settings",
+      "expected": "Ads are shown only after the required consent and respect age-related settings. (Advisory: confirm current ad network and store rules.)",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "ads",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Manual review of consent flow and ad configuration on a device.",
+        "environments": [
+          "physical-device",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Verify ad consent and age settings",
+        "description": "Check the consent flow and ad SDK configuration for age-related settings on a device."
+      }
+    },
+    {
+      "id": "ads-age.children",
+      "topic": "ads-age",
+      "title": "Children's app requirements reviewed",
+      "expected": "Requirements for apps directed at children were reviewed against authoritative sources and met. (Advisory.)",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "children",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Documented human review against the current store programme rules and applicable law.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Review children's app requirements",
+        "description": "Review store programme rules and applicable law for apps directed at children; record the review as evidence."
+      }
+    },
+    {
+      "id": "privacy.disclosures",
+      "topic": "privacy",
+      "title": "Privacy policy and store data disclosures match behaviour",
+      "expected": "The privacy policy and store data-safety/privacy labels describe the data the app actually collects and shares.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "personal-data",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Human review comparing disclosures with the data inventory of this build.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Check privacy policy and store disclosures against actual data use",
+        "description": "Compare the privacy policy and store privacy labels with the data this build collects and shares; fix mismatches."
+      }
+    },
+    {
+      "id": "privacy.server-deletion",
+      "topic": "privacy",
+      "title": "Users can have server-side data deleted",
+      "expected": "There is a working way to delete user data held on servers or third-party services.",
+      "severity": "major",
+      "applicableWhen": {
+        "all": [
+          {
+            "question": "personal-data",
+            "equals": "yes"
+          },
+          {
+            "question": "remote-data",
+            "equals": "yes"
+          }
+        ]
+      },
+      "verification": {
+        "method": "End-to-end deletion request against a non-production backend.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Verify deletion of server-side user data",
+        "description": "Run an end-to-end deletion request against a non-production backend and confirm the data is gone."
+      }
+    },
+    {
+      "id": "accessibility.text-size",
+      "topic": "accessibility",
+      "title": "Text scales with system font size",
+      "expected": "At the largest system text sizes (Dynamic Type / font scale), text scales without clipping or overlapping.",
+      "severity": "major",
+      "verification": {
+        "method": "Manual check at the largest text size on each target platform.",
+        "environments": [
+          "physical-device",
+          "simulator",
+          "emulator",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Check layouts at the largest system text size",
+        "description": "Set the largest system text size on each target platform and check every screen for clipping or overlap."
+      }
+    },
+    {
+      "id": "accessibility.screen-reader",
+      "topic": "accessibility",
+      "title": "Screen reader labels and order",
+      "expected": "Every interactive element has a meaningful VoiceOver/TalkBack label and a sensible focus order.",
+      "severity": "major",
+      "verification": {
+        "method": "Manual walkthrough with VoiceOver/TalkBack on a physical device.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Walk through the app with VoiceOver/TalkBack",
+        "description": "On a physical device, navigate every screen with the screen reader and fix missing labels or focus order."
+      }
+    },
+    {
+      "id": "errors.network",
+      "topic": "errors",
+      "title": "Network failures are recoverable",
+      "expected": "Timeouts and offline errors show a clear message and a way to retry; no data is lost.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "remote-data",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Automated tests with injected failures, or manual network conditioning.",
+        "environments": [
+          "ci",
+          "emulator",
+          "simulator",
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Test recovery from network failures",
+        "description": "Inject timeouts and connection failures and confirm messages, retry and data preservation."
+      },
+      "evidence": {
+        "junit": [
+          "network",
+          "offline.?error"
+        ],
+        "checks": []
+      }
+    },
+    {
+      "id": "errors.release-stability",
+      "topic": "errors",
+      "title": "Release build is crash-free in a smoke test",
+      "expected": "A smoke test of the release build on a physical device shows no crashes.",
+      "severity": "major",
+      "verification": {
+        "method": "Smoke test of the signed release build on a physical device with crash reporting enabled.",
+        "environments": [
+          "physical-device"
+        ]
+      },
+      "task": {
+        "title": "Run a crash-free smoke test of the release build",
+        "description": "Run the release build on a physical device with crash reporting enabled; record any crashes."
+      },
+      "dependsOn": [
+        "release.signed-build"
+      ]
+    },
+    {
+      "id": "store.assets",
+      "topic": "store",
+      "title": "Store listing assets prepared",
+      "expected": "Icon, screenshots, description and support URL are ready for each target store.",
+      "severity": "minor",
+      "verification": {
+        "method": "Human review of the store listing drafts.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Prepare store listing assets",
+        "description": "Prepare icon, screenshots, description and support URL for each target store."
+      }
+    },
+    {
+      "id": "release.signed-build",
+      "topic": "release",
+      "title": "Signed release build from a tagged revision",
+      "expected": "CI produces a signed release build from a tagged source revision, and the revision is recorded.",
+      "severity": "blocker",
+      "verification": {
+        "method": "CI job output linked to the tagged revision.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Produce a signed release build in CI",
+        "description": "Configure CI to build and sign the release from a tagged revision and record the revision with the artifact."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "release",
+          "sign"
+        ]
+      }
+    }
+  ]
+}

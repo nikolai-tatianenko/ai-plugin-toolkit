@@ -1,6 +1,40 @@
 # Acceptance and integration test plan
 
-Status: planned; no tests have run. Use synthetic fixtures only.
+Status: v0.1 automated suite in place (see the coverage table below). Use synthetic fixtures only.
+
+## Coverage (2026-11-02, v0.1–v0.4)
+
+| ID | Status | Where |
+| --- | --- | --- |
+| A01 | passed | storage, memory and CLI tests |
+| A02 | passed | `memory/test/extract.test.ts`, CLI workflow |
+| A03 | passed | `extract.test.ts`, `retrieval.test.ts`, CLI workflow |
+| A04 | passed | `extract.test.ts` |
+| A05 | passed (storage and retrieval; no caches exist yet) | `store.test.ts`, `retrieval.test.ts` |
+| A06 | passed | `memory/test/lifecycle.test.ts`, CLI workflow 4 |
+| A07 | passed | `artifacts.test.ts`, CLI workflow |
+| A08 | passed | `acceptance.test.ts` |
+| A09 | passed | `acceptance.test.ts`, CLI workflow |
+| A10 | passed | `acceptance.test.ts` |
+| A11 | passed | `acceptance.test.ts`, CLI workflow |
+| A12 | passed | `acceptance.test.ts`, CLI workflow |
+| A13 | passed | `acceptance.test.ts`, CLI workflow |
+| A14 | passed against the reference adapter and a fake Task Master CLI; real Beads/Task Master **not run** | `task-sync/test/sync.test.ts`, `adapter-taskmaster/test/*.ts`; real suites skipped |
+| A15 | as A14 | same |
+| A16 | as A14; two-way resolution passes (CL-019) | same, plus `sync.test.ts` two-way suite |
+| A17 | as A14 | same |
+| A18 | passed | `router.test.ts`, `extract.test.ts` |
+| A19 | passed (config and runtime) | `config.test.ts`, `router.test.ts` |
+| A20 | passed | `extract.test.ts`, `retrieval.test.ts` |
+| A21 | passed (including a raw scan of the database file) | `lifecycle.test.ts`, CLI workflow 5 |
+| A22 | passed | `plugins.test.ts`, `sync.test.ts`, `beads.unit.test.ts` |
+| A23 | passed | `config.test.ts`, `store.test.ts`, `beads.unit.test.ts` |
+| A24 | passed | `retrieval/test/cache.test.ts`, CLI test |
+| A25 | passed on the 11-case baseline (rules); model path falls back on violations | `normalize/test/normalize.test.ts` |
+| A26 | passed up to `tasks preview` (also from the bundled CLI installed on PATH); ingest-to-sync needs real Beads | fresh-clone run, `examples/synthetic/demo.sh`, `pnpm release:check` |
+| A27 | passed with outside network denied (all non-loopback sockets and DNS blocked) using a local Ollama-compatible stub; a real local model run is still pending | `apps/cli/test/local.test.ts` |
+
+The release gate "one real adapter" is **open** until the real Beads suites run. Workflows 4 (correction) and 5 (deletion) are automated in `apps/cli/test/workflow.test.ts`. CI runs on Node 22 and 24.
 
 ## Required automated integration workflows
 

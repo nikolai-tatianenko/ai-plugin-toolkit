@@ -13,6 +13,45 @@
     },
     {
       "path": "../../packages/storage-sqlite"
+    },
+    {
+      "path": "../../packages/router"
+    },
+    {
+      "path": "../../packages/provider-anthropic"
+    },
+    {
+      "path": "../../packages/memory"
+    },
+    {
+      "path": "../../packages/retrieval"
+    },
+    {
+      "path": "../../packages/acceptance"
+    },
+    {
+      "path": "../../packages/artifacts"
+    },
+    {
+      "path": "../../packages/task-sync"
+    },
+    {
+      "path": "../../packages/adapter-beads"
+    },
+    {
+      "path": "../../packages/provider-ollama"
+    },
+    {
+      "path": "../../packages/adapter-taskmaster"
+    },
+    {
+      "path": "../../packages/normalize"
+    },
+    {
+      "path": "../../packages/interface-mcp"
+    },
+    {
+      "path": "../../packages/inspector"
     }
   ]
 }
