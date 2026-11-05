@@ -1,4 +1,4 @@
-import { mkdir } from "node:fs/promises";
+import { copyFile, mkdir, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -14,10 +14,14 @@ import {
   type Source,
   type SourceInput,
 } from "@ai-plugin-toolkit/core";
-import { readEvidenceFile, writeEvidenceFile } from "./evidence-files.js";
-import { MIGRATIONS, migrate, type Migration } from "./migrations.js";
+import { Db } from "./db.js";
+import { readEvidenceFile, resolveEvidencePath, writeEvidenceFile } from "./evidence-files.js";
+import { MemoryRepo } from "./memory-repo.js";
+import { MIGRATIONS, currentSchemaVersion, migrate, type Migration } from "./migrations.js";
+import { AcceptanceRepo, ArtifactRepo, CacheRepo, RoutingRepo, StateRepo, TaskRepo } from "./repos.js";
 
 export const DATABASE_FILENAME = "loom.db";
+export const BACKUP_DIR = "backups";
 export const DEFAULT_INLINE_LIMIT_BYTES = 64 * 1024;
 export const DEFAULT_MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
@@ -34,6 +38,11 @@ export interface StoreOptions {
   migrations?: readonly Migration[];
   /** Test seam: called inside the ingest transaction after each insert. */
   onInsert?: (source: Source) => void;
+  /**
+   * Open the database read-only (SQLite `readOnly` plus `PRAGMA query_only`). No
+   * migrations or index backfill run; any write fails at the SQLite level.
+   */
+  readOnly?: boolean;
 }
 
 type Row = Record<string, string | number | null>;
@@ -68,12 +77,28 @@ export class LoomStore {
   readonly storageDir: string;
   readonly databasePath: string;
   private readonly db: DatabaseSync;
+  private readonly handle: Db;
+  readonly memory: MemoryRepo;
+  readonly state: StateRepo;
+  readonly routing: RoutingRepo;
+  readonly acceptance: AcceptanceRepo;
+  readonly artifacts: ArtifactRepo;
+  readonly tasks: TaskRepo;
+  readonly cache: CacheRepo;
   private readonly inlineLimit: number;
   private readonly maxSourceBytes: number;
   private readonly onInsert: ((source: Source) => void) | undefined;
 
   private constructor(db: DatabaseSync, options: StoreOptions, databasePath: string) {
     this.db = db;
+    this.handle = new Db(db);
+    this.memory = new MemoryRepo(this.handle);
+    this.state = new StateRepo(this.handle);
+    this.routing = new RoutingRepo(this.handle);
+    this.acceptance = new AcceptanceRepo(this.handle);
+    this.artifacts = new ArtifactRepo(this.handle);
+    this.tasks = new TaskRepo(this.handle);
+    this.cache = new CacheRepo(this.handle);
     this.storageDir = path.resolve(options.storageDir);
     this.databasePath = databasePath;
     this.inlineLimit = options.inlineLimitBytes ?? DEFAULT_INLINE_LIMIT_BYTES;
@@ -85,15 +110,71 @@ export class LoomStore {
     const storageDir = path.resolve(options.storageDir);
     await mkdir(storageDir, { recursive: true });
     const databasePath = path.join(storageDir, DATABASE_FILENAME);
+    if (options.readOnly) {
+      let ro: DatabaseSync;
+      try {
+        ro = new DatabaseSync(databasePath, { readOnly: true });
+      } catch (cause) {
+        throw new LoomError("NOT_FOUND", `No Loom database at ${databasePath}. Run a write command (e.g. \`loom ingest\`) first.`, { cause });
+      }
+      try {
+        ro.exec("PRAGMA query_only = ON; PRAGMA busy_timeout = 5000;");
+        const version = currentSchemaVersionReadOnly(ro);
+        const expected = (options.migrations ?? MIGRATIONS).length;
+        if (version !== expected) {
+          throw new LoomError("INTERNAL", `Database schema version ${version} does not match this build (${expected}). Run any write command once to migrate.`);
+        }
+      } catch (error) {
+        ro.close();
+        throw error;
+      }
+      return new LoomStore(ro, options, databasePath);
+    }
     const db = new DatabaseSync(databasePath);
     try {
       db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000; PRAGMA synchronous = NORMAL;");
-      migrate(db, options.migrations ?? MIGRATIONS);
+      const migrations = options.migrations ?? MIGRATIONS;
+      const from = currentSchemaVersion(db);
+      if (from > 0 && from < migrations.length) {
+        // Recovery point (CL-019): a consistent copy before any pending migration runs.
+        const dir = path.join(storageDir, BACKUP_DIR);
+        await mkdir(dir, { recursive: true });
+        db.prepare("VACUUM INTO ?").run(path.join(dir, `loom-v${from}-${new Date().toISOString().replace(/[:.]/g, "-")}.db`));
+      }
+      migrate(db, migrations);
     } catch (error) {
       db.close();
       throw error;
     }
-    return new LoomStore(db, options, databasePath);
+    const store = new LoomStore(db, options, databasePath);
+    try {
+      await store.indexUnindexedSources();
+    } catch (error) {
+      store.close();
+      throw error;
+    }
+    return store;
+  }
+
+  /** Atomic group of writes across repositories. Re-entrant. */
+  transaction<T>(fn: () => T): T {
+    return this.handle.transaction(fn);
+  }
+
+  /** Sources stored before the lexical index existed (schema v1) are indexed on open. */
+  private async indexUnindexedSources(): Promise<void> {
+    const rows = this.db
+      .prepare(
+        "SELECT id, project_id FROM sources WHERE id NOT IN (SELECT record_id FROM memory_fts WHERE kind = 'source') ORDER BY rowid",
+      )
+      .all() as Row[];
+    for (const row of rows) {
+      const projectId = String(row.project_id);
+      const source = this.getSource(projectId, String(row.id));
+      if (source === undefined) continue;
+      const text = await this.readSourceText(projectId, source.id);
+      this.memory.index(projectId, source.id, "source", searchableText(source, text));
+    }
   }
 
   close(): void {
@@ -192,7 +273,10 @@ export class LoomStore {
         );
         const source = this.getSource(projectId, id);
         if (source === undefined) throw new LoomError("INTERNAL", `Source ${id} missing after insert.`);
-        if (result.changes > 0) this.onInsert?.(source);
+        if (result.changes > 0) {
+          this.memory.index(projectId, id, "source", searchableText(source, input.text));
+          this.onInsert?.(source);
+        }
         outcomes.push({ source, status: result.changes > 0 ? "created" : "existing" });
       }
       const created = outcomes.filter((o) => o.status === "created").map((o) => o.source.id);
@@ -238,7 +322,71 @@ export class LoomStore {
     }));
   }
 
-  private projectExists(projectId: string): boolean {
+  /**
+   * Delete a source row, its index entry and (when no other source shares it) its payload
+   * file. Callers remove derived records first; see memory's forgetSource.
+   */
+  async deleteSource(projectId: string, sourceId: string): Promise<{ payloadRemoved: boolean }> {
+    const source = this.getSource(projectId, sourceId);
+    if (source === undefined) throw new LoomError("NOT_FOUND", `Source ${sourceId} not found in project "${projectId}".`);
+    this.transaction(() => {
+      this.db.prepare("DELETE FROM memory_fts WHERE project_id = ? AND record_id = ?").run(projectId, sourceId);
+      this.db.prepare("DELETE FROM record_sources WHERE project_id = ? AND source_id = ?").run(projectId, sourceId);
+      this.db.prepare("DELETE FROM sources WHERE project_id = ? AND id = ?").run(projectId, sourceId);
+    });
+    let payloadRemoved = false;
+    if (source.content.kind === "file") {
+      const shared = this.db.prepare("SELECT 1 FROM sources WHERE content_path = ?").get(source.content.path);
+      if (shared === undefined) {
+        await rm(resolveEvidencePath(this.storageDir, source.content.path), { force: true });
+        payloadRemoved = true;
+      }
+    }
+    return { payloadRemoved };
+  }
+
+  /**
+   * Rewrite the database file so deleted rows do not survive in free pages or the WAL.
+   * Copies outside this file (backups, exports, OS snapshots) are not affected.
+   */
+  scrub(): void {
+    this.db.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM; PRAGMA wal_checkpoint(TRUNCATE);");
+  }
+
+  /** Backups written before migrations or by `loom db backup`, newest last. */
+  async listBackups(): Promise<string[]> {
+    try {
+      return (await readdir(path.join(this.storageDir, BACKUP_DIR))).filter((f) => f.endsWith(".db")).sort();
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Replace a database file with a backup. Must run while no store is open on it;
+   * the current file is kept next to it as `<name>.before-restore`.
+   */
+  static async restoreBackup(storageDir: string, backupFile: string): Promise<string> {
+    const target = path.join(path.resolve(storageDir), DATABASE_FILENAME);
+    const keep = `${target}.before-restore`;
+    await rm(keep, { force: true });
+    await copyFile(target, keep).catch(() => undefined);
+    for (const suffix of ["-wal", "-shm"]) await rm(`${target}${suffix}`, { force: true });
+    await copyFile(backupFile, target);
+    return keep;
+  }
+
+  /** Consistent copy of the database (used before migrations and by `loom db backup`). */
+  backupTo(file: string): void {
+    this.db.prepare("VACUUM INTO ?").run(file);
+  }
+
+  /** Append an audit event (operation, actor, changed IDs, result). Never pass secret payloads. */
+  audit(projectId: string, operation: string, actor: string, changedIds: string[], errorCode?: string): void {
+    this.recordAudit(projectId, operation, actor, changedIds, errorCode);
+  }
+
+  projectExists(projectId: string): boolean {
     return this.db.prepare("SELECT 1 FROM projects WHERE id = ?").get(projectId) !== undefined;
   }
 
@@ -268,15 +416,26 @@ export class LoomStore {
     }
   }
 
-  private transaction<T>(fn: () => T): T {
-    this.db.exec("BEGIN IMMEDIATE");
+}
+
+function currentSchemaVersionReadOnly(db: DatabaseSync): number {
+  const table = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'schema_migrations'").get();
+  if (table === undefined) return 0;
+  return ((db.prepare("SELECT MAX(version) AS v FROM schema_migrations").get() as { v: number | null }).v ?? 0);
+}
+
+/** Index conversations by their message text rather than JSON keys; other sources as-is. */
+export function searchableText(source: Source, text: string): string {
+  const parts = [source.title ?? ""];
+  if (source.type === "conversation" && source.mediaType === "application/json") {
     try {
-      const result = fn();
-      this.db.exec("COMMIT");
-      return result;
-    } catch (error) {
-      if (this.db.isTransaction) this.db.exec("ROLLBACK");
-      throw error;
+      const parsed = JSON.parse(text) as { messages?: Array<{ content?: unknown }> };
+      for (const message of parsed.messages ?? []) if (typeof message.content === "string") parts.push(message.content);
+      return parts.join("\n");
+    } catch {
+      // fall through: index raw text
     }
   }
+  parts.push(text);
+  return parts.join("\n");
 }

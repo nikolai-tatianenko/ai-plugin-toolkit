@@ -46,14 +46,14 @@ describe("migrations", () => {
       ...MIGRATIONS,
       { version: MIGRATIONS.length + 1, name: "broken", sql: "CREATE TABLE half_done (x TEXT); SELECT * FROM no_such_table;" },
     ];
-    await expect(open({ migrations: broken })).rejects.toThrow(/rolled back; database remains at version 1/);
+    await expect(open({ migrations: broken })).rejects.toThrow(new RegExp(`rolled back; database remains at version ${MIGRATIONS.length}`));
 
     const raw = new DatabaseSync(path.join(dir, DATABASE_FILENAME));
     expect(raw.prepare("SELECT name FROM sqlite_master WHERE name = 'half_done'").get()).toBeUndefined();
     raw.close();
 
     using recovered = await open();
-    expect(recovered.schemaVersion()).toBe(1);
+    expect(recovered.schemaVersion()).toBe(MIGRATIONS.length);
     expect(recovered.countSources("demo")).toBe(1);
   });
 
@@ -176,5 +176,29 @@ describe("A05: project isolation", () => {
     expect(store.getSource("b", inA!.source.id)).toBeUndefined();
     expect(await codeOf(store.readSourceText("b", inA!.source.id))).toBe("NOT_FOUND");
     expect(store.listSources("a").map((s) => s.id)).toEqual([inA!.source.id]);
+  });
+});
+
+describe("migration recovery (CL-019)", () => {
+  it("writes a consistent backup before applying pending migrations to an existing database", async () => {
+    {
+      using old = await open({ migrations: MIGRATIONS.slice(0, 2) });
+      old.ensureProject("demo", "Demo");
+      await old.ingest("demo", [doc("before upgrade")], actor);
+    }
+    using upgraded = await open();
+    expect(upgraded.schemaVersion()).toBe(MIGRATIONS.length);
+    const backups = await upgraded.listBackups();
+    expect(backups).toHaveLength(1);
+    expect(backups[0]).toMatch(/^loom-v2-/);
+    const copy = new DatabaseSync(path.join(dir, "backups", backups[0]!));
+    expect((copy.prepare("SELECT MAX(version) AS v FROM schema_migrations").get() as { v: number }).v).toBe(2);
+    expect((copy.prepare("SELECT COUNT(*) AS n FROM sources").get() as { n: number }).n).toBe(1);
+    copy.close();
+  });
+
+  it("does not back up a fresh database", async () => {
+    using store = await open();
+    expect(await store.listBackups()).toEqual([]);
   });
 });

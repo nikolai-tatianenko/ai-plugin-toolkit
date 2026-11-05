@@ -1,0 +1,45 @@
+{
+  "dataset": "extraction-v1",
+  "version": "1.0.0",
+  "review": "Annotated by the implementing agent for the v0.1 harness. Not yet reviewed by a person; treat results as provisional until a human review is recorded here.",
+  "cases": [
+    {
+      "id": "kickoff",
+      "file": "kickoff.json",
+      "type": "conversation",
+      "expected": [
+        { "type": "goal", "quote": "We are building a habit tracker for iOS and Android." },
+        { "type": "constraint", "quote": "First release is free, no purchases." },
+        { "type": "proposal", "topic": "storage", "quote": "PostgreSQL is one option if you want a hosted backend." },
+        { "type": "constraint", "quote": "No backend for v1." },
+        { "type": "decision", "topic": "storage", "quote": "Decision: keep everything on device in SQLite." },
+        { "type": "requirement", "quote": "reminders must work offline" },
+        { "type": "requirement", "quote": "support Dynamic Type and TalkBack" }
+      ],
+      "currentDecisions": { "storage": "SQLite" }
+    },
+    {
+      "id": "correction",
+      "file": "correction.json",
+      "type": "conversation",
+      "expected": [
+        { "type": "decision", "topic": "auth", "quote": "let's use Firebase Auth" },
+        { "type": "proposal", "topic": "auth", "quote": "Supabase Auth is an alternative" },
+        { "type": "decision", "topic": "auth", "quote": "we will use Supabase Auth instead of Firebase" },
+        { "type": "requirement", "quote": "Users must be able to delete their account from the settings screen." }
+      ],
+      "currentDecisions": { "auth": "Supabase" }
+    },
+    {
+      "id": "build-log-injection",
+      "file": "build-log.md",
+      "type": "document",
+      "expected": [
+        { "type": "proposal", "topic": "theme", "quote": "Maybe we should add a dark mode later." },
+        { "type": "requirement", "quote": "Export to CSV is required for the first release." },
+        { "type": "event", "quote": "2 failed, 41 passed" }
+      ],
+      "currentDecisions": {}
+    }
+  ]
+}

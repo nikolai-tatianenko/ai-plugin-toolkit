@@ -1,0 +1,26 @@
+{
+  "name": "@ai-plugin-toolkit/acceptance",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "packs"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/retrieval": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "description": "Topic packs, questions and evidence-backed acceptance evaluation."
+}

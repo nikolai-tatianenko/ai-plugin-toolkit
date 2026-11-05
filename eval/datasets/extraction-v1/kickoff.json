@@ -1,0 +1,11 @@
+{
+  "title": "Synthetic kickoff: habit tracker mobile app",
+  "createdAt": "2026-10-01T09:00:00Z",
+  "messages": [
+    { "role": "user", "content": "We are building a habit tracker for iOS and Android. First release is free, no purchases." },
+    { "role": "assistant", "content": "Understood. For storage, PostgreSQL is one option if you want a hosted backend." },
+    { "role": "user", "content": "No backend for v1. Decision: keep everything on device in SQLite." },
+    { "role": "assistant", "content": "Noted: on-device SQLite, no purchases in v1. Do you need offline reminders?" },
+    { "role": "user", "content": "Yes, reminders must work offline. Accessibility: support Dynamic Type and TalkBack." }
+  ]
+}

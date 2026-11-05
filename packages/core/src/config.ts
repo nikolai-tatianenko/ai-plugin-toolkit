@@ -7,7 +7,7 @@ export const CONFIG_FILENAME = "loom.config.json";
 export const CONFIG_VERSION = 1;
 
 /** Routing policy names known to v0.1. Unknown policies are rejected rather than ignored. */
-export const ROUTING_TASKS = ["extraction", "summary", "planning", "review"] as const;
+export const ROUTING_TASKS = ["extraction", "summary", "planning", "review", "embedding", "normalization"] as const;
 export type RoutingTask = (typeof ROUTING_TASKS)[number];
 
 const ProviderNameSchema = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/, "Provider name must be a lowercase slug");
@@ -25,6 +25,10 @@ export const ProviderConfigSchema = z.strictObject({
   model: z.string().min(1).optional(),
   apiKeyEnv: EnvVarNameSchema.optional(),
   baseUrl: z.url().optional(),
+  /** Embedding model for adapters that support embeddings (e.g. Ollama "nomic-embed-text"). */
+  embeddingModel: z.string().min(1).optional(),
+  /** `fixture` adapter only: recorded responses, relative to the project directory. */
+  fixture: z.string().min(1).optional(),
 });
 export type ProviderConfig = z.infer<typeof ProviderConfigSchema>;
 
@@ -37,6 +41,39 @@ export const RoutingPolicySchema = z.strictObject({
   maxCostUsd: z.number().positive().optional(),
 });
 export type RoutingPolicy = z.infer<typeof RoutingPolicySchema>;
+
+export const TASK_ADAPTERS = ["beads", "taskmaster"] as const;
+
+export const TaskSyncConfigSchema = z.strictObject({
+  adapter: z.enum(TASK_ADAPTERS),
+  /**
+   * Publishing writes to an external system. It is off unless the project opts in;
+   * `loom tasks preview` works either way.
+   */
+  allowWrites: z.boolean().default(false),
+  beads: z
+    .strictObject({
+      /** Beads database directory (BEADS_DIR), relative to the project directory. */
+      dir: z.string().min(1).default(".beads"),
+      /** Executable name or absolute path. Never run through a shell. */
+      command: z.string().min(1).default("bd"),
+    })
+    .default({ dir: ".beads", command: "bd" }),
+  taskmaster: z
+    .strictObject({
+      /** Directory containing `.taskmaster/`, relative to the project directory. */
+      dir: z.string().min(1).default("."),
+      command: z.string().min(1).default("task-master"),
+      tag: z.string().regex(/^[A-Za-z0-9._-]{1,64}$/).default("master"),
+    })
+    .default({ dir: ".", command: "task-master", tag: "master" }),
+  /**
+   * Who owns task status. Only the external task system can own it in this version:
+   * Loom reads status back and never sets or closes tasks.
+   */
+  statusOwner: z.literal("external").default("external"),
+});
+export type TaskSyncConfig = z.output<typeof TaskSyncConfigSchema>;
 
 export const LoomConfigSchema = z
   .strictObject({
@@ -55,6 +92,25 @@ export const LoomConfigSchema = z
       .default({ dir: ".loom" }),
     providers: z.record(ProviderNameSchema, ProviderConfigSchema).default({}),
     routing: z.partialRecord(z.enum(ROUTING_TASKS), RoutingPolicySchema).default({}),
+    artifacts: z
+      .strictObject({
+        /** Where generated Markdown is written, relative to the project directory. */
+        dir: z.string().min(1).default("loom-docs"),
+      })
+      .default({ dir: "loom-docs" }),
+    tasks: TaskSyncConfigSchema.optional(),
+    mcp: z
+      .strictObject({
+        /** Allow MCP clients to call write tools (answer questions, generate artifacts). Off by default. */
+        allowWrites: z.boolean().default(false),
+      })
+      .default({ allowWrites: false }),
+    retention: z
+      .strictObject({
+        /** Sources older than this (by ingest time) are forgotten by `loom retention apply`. */
+        sourceMaxAgeDays: z.int().min(1).max(36_500).optional(),
+      })
+      .default({}),
   })
   .superRefine((config, ctx) => {
     for (const [task, policy] of Object.entries(config.routing)) {
@@ -78,12 +134,19 @@ export const LoomConfigSchema = z
         }
       });
     }
-    if (!isContainedRelativePath(config.storage.dir)) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["storage", "dir"],
-        message: "storage.dir must be a relative path inside the project directory",
-      });
+    const contained: Array<[string | undefined, (string | number)[]]> = [
+      [config.storage.dir, ["storage", "dir"]],
+      [config.artifacts.dir, ["artifacts", "dir"]],
+      [config.tasks?.beads.dir, ["tasks", "beads", "dir"]],
+      ...(config.tasks?.taskmaster.dir === "." ? [] : ([[config.tasks?.taskmaster.dir, ["tasks", "taskmaster", "dir"]]] as Array<[string | undefined, (string | number)[]]>)),
+      ...Object.entries(config.providers).map(
+        ([name, p]): [string | undefined, (string | number)[]] => [p.fixture, ["providers", name, "fixture"]],
+      ),
+    ];
+    for (const [value, where] of contained) {
+      if (value !== undefined && !isContainedRelativePath(value)) {
+        ctx.addIssue({ code: "custom", path: where, message: `${where.join(".")} must be a relative path inside the project directory` });
+      }
     }
   });
 
@@ -133,11 +196,16 @@ export function defaultConfig(project: { id: string; name: string }): LoomConfig
 
 /** Absolute storage directory; re-checks containment so a hand-edited config cannot escape the root. */
 export function resolveStorageDir(rootDir: string, config: LoomConfig): string {
+  return resolveProjectPath(rootDir, config.storage.dir, "storage.dir");
+}
+
+/** Resolve a configured relative path, refusing anything outside the project directory (A23). */
+export function resolveProjectPath(rootDir: string, relativePath: string, label: string): string {
   const root = path.resolve(rootDir);
-  const resolved = path.resolve(root, config.storage.dir);
+  const resolved = path.resolve(root, relativePath);
   const relative = path.relative(root, resolved);
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
-    throw new LoomError("INVALID_PATH", `storage.dir resolves outside the project directory: ${config.storage.dir}`);
+  if (relativePath.includes("\0") || relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new LoomError("INVALID_PATH", `${label} resolves outside the project directory: ${relativePath}`);
   }
   return resolved;
 }

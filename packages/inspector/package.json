@@ -1,0 +1,37 @@
+{
+  "name": "@ai-plugin-toolkit/inspector",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Read-only local web inspector for Context Loom memory, acceptance and tasks.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "ui-dist"
+  ],
+  "scripts": {
+    "build": "tsc -b && node build-ui.mjs"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*",
+    "@ai-plugin-toolkit/acceptance": "workspace:*",
+    "@ai-plugin-toolkit/task-sync": "workspace:*"
+  },
+  "devDependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "esbuild": "0.28.2",
+    "axe-core": "4.10.2",
+    "playwright": "1.63.0",
+    "@ai-plugin-toolkit/router": "workspace:*"
+  }
+}

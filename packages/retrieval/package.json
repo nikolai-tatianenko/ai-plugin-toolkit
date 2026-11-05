@@ -1,0 +1,27 @@
+{
+  "name": "@ai-plugin-toolkit/retrieval",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*"
+  },
+  "devDependencies": {
+    "@ai-plugin-toolkit/router": "workspace:*"
+  },
+  "description": "Project-scoped lexical retrieval and bounded context assembly."
+}

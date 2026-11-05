@@ -1,0 +1,354 @@
+{
+  "format": "loom-pack/1",
+  "id": "web-release",
+  "version": "0.1.0",
+  "title": "Web application release",
+  "description": "Readiness for releasing a web application: browsers, accessibility, performance, security headers, authentication, privacy and consent, error handling, monitoring and deployment rollback.",
+  "advisory": "Engineering checklist. Accessibility conformance claims (WCAG) and privacy/consent obligations need review against the authoritative texts and applicable law.",
+  "topics": [
+    {
+      "id": "browsers",
+      "title": "Browsers and devices"
+    },
+    {
+      "id": "accessibility",
+      "title": "Accessibility"
+    },
+    {
+      "id": "performance",
+      "title": "Performance"
+    },
+    {
+      "id": "security",
+      "title": "Security"
+    },
+    {
+      "id": "privacy",
+      "title": "Privacy and consent"
+    },
+    {
+      "id": "operations",
+      "title": "Operations"
+    }
+  ],
+  "questions": [
+    {
+      "id": "has-accounts",
+      "topic": "security",
+      "text": "Do users sign in?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "login",
+        "sign in",
+        "account"
+      ]
+    },
+    {
+      "id": "uses-cookies",
+      "topic": "privacy",
+      "text": "Does the site set non-essential cookies or trackers?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "cookie",
+        "analytics",
+        "tracking"
+      ]
+    },
+    {
+      "id": "processes-payments",
+      "topic": "security",
+      "text": "Does the site take payments?",
+      "impact": "high",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "payment",
+        "checkout",
+        "stripe"
+      ]
+    },
+    {
+      "id": "mobile-users",
+      "topic": "browsers",
+      "text": "Must the site work on mobile browsers?",
+      "impact": "medium",
+      "answer": {
+        "type": "yes-no"
+      },
+      "hints": [
+        "mobile",
+        "responsive",
+        "phone"
+      ]
+    }
+  ],
+  "criteria": [
+    {
+      "id": "browsers.supported",
+      "topic": "browsers",
+      "title": "Supported browsers tested",
+      "expected": "Main flows pass on the documented browser matrix (latest two versions of each).",
+      "severity": "major",
+      "verification": {
+        "method": "Automated end-to-end tests on the matrix.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Run end-to-end tests on the browser matrix",
+        "description": "Run main flows on each supported browser."
+      },
+      "evidence": {
+        "junit": [
+          "e2e",
+          "playwright"
+        ],
+        "checks": [
+          "e2e"
+        ]
+      }
+    },
+    {
+      "id": "browsers.mobile",
+      "topic": "browsers",
+      "title": "Mobile layouts and touch work",
+      "expected": "Main flows work at phone widths with touch input.",
+      "severity": "major",
+      "applicableWhen": {
+        "question": "mobile-users",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Device or emulated-device tests.",
+        "environments": [
+          "physical-device",
+          "emulator",
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Test main flows on mobile widths",
+        "description": "Check layouts and touch interaction at phone widths."
+      }
+    },
+    {
+      "id": "accessibility.automated",
+      "topic": "accessibility",
+      "title": "Automated accessibility scan clean",
+      "expected": "An automated scan (e.g. axe) of main pages reports no serious or critical violations.",
+      "severity": "major",
+      "verification": {
+        "method": "Automated scan in CI.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Add an automated accessibility scan",
+        "description": "Scan main pages in CI and fix serious/critical findings."
+      },
+      "evidence": {
+        "junit": [
+          "a11y",
+          "axe",
+          "accessib"
+        ],
+        "checks": [
+          "a11y",
+          "axe"
+        ]
+      }
+    },
+    {
+      "id": "accessibility.keyboard",
+      "topic": "accessibility",
+      "title": "Keyboard and screen-reader walkthrough",
+      "expected": "All interactive elements are reachable by keyboard with visible focus and meaningful names.",
+      "severity": "major",
+      "verification": {
+        "method": "Manual walkthrough with keyboard and a screen reader.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Walk through with keyboard and a screen reader",
+        "description": "Navigate every page by keyboard and screen reader; fix gaps."
+      }
+    },
+    {
+      "id": "performance.budget",
+      "topic": "performance",
+      "title": "Performance budget met",
+      "expected": "Key pages meet the agreed load and interaction budgets on a mid-range device profile.",
+      "severity": "major",
+      "verification": {
+        "method": "Lab measurement (e.g. Lighthouse) in CI with the budget recorded.",
+        "environments": [
+          "ci"
+        ]
+      },
+      "task": {
+        "title": "Measure performance against the budget",
+        "description": "Measure key pages in CI and record results against the budget."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "lighthouse",
+          "perf"
+        ]
+      }
+    },
+    {
+      "id": "security.headers",
+      "topic": "security",
+      "title": "Security headers and HTTPS",
+      "expected": "HTTPS only, HSTS, a content security policy and safe cookie flags are set.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Automated header check against the deployed environment.",
+        "environments": [
+          "ci",
+          "production"
+        ]
+      },
+      "task": {
+        "title": "Check HTTPS and security headers",
+        "description": "Verify HTTPS, HSTS, CSP and cookie flags on the deployed site."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "headers",
+          "csp"
+        ]
+      }
+    },
+    {
+      "id": "security.auth",
+      "topic": "security",
+      "title": "Authentication flows secure",
+      "expected": "Sign-in, sign-out, session expiry, password reset and rate limiting work and are tested.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "has-accounts",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Integration tests against a non-production identity backend.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Test authentication flows",
+        "description": "Test sign-in, sign-out, expiry, reset and rate limiting."
+      },
+      "evidence": {
+        "junit": [
+          "auth",
+          "login"
+        ],
+        "checks": []
+      }
+    },
+    {
+      "id": "security.payments",
+      "topic": "security",
+      "title": "Payments handled by a compliant provider",
+      "expected": "Card data never touches the application servers; provider test-mode flows pass.",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "processes-payments",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Test-mode payment run and architecture review.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Verify payment flows in test mode",
+        "description": "Run test-mode payments and confirm card data stays with the provider."
+      }
+    },
+    {
+      "id": "privacy.consent",
+      "topic": "privacy",
+      "title": "Consent before non-essential cookies",
+      "expected": "No non-essential cookie or tracker loads before consent; withdrawal works. (Advisory: confirm applicable law.)",
+      "severity": "blocker",
+      "applicableWhen": {
+        "question": "uses-cookies",
+        "equals": "yes"
+      },
+      "verification": {
+        "method": "Manual check with a fresh browser profile plus network inspection.",
+        "environments": [
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Verify consent gating of cookies and trackers",
+        "description": "With a fresh profile, confirm nothing non-essential loads before consent."
+      }
+    },
+    {
+      "id": "operations.errors",
+      "topic": "operations",
+      "title": "Errors are handled and reported",
+      "expected": "User-facing errors are understandable; server and client errors reach monitoring.",
+      "severity": "major",
+      "verification": {
+        "method": "Fault injection in staging and monitoring check.",
+        "environments": [
+          "ci",
+          "manual",
+          "production"
+        ]
+      },
+      "task": {
+        "title": "Verify error handling and reporting",
+        "description": "Inject failures in staging; confirm messages and monitoring alerts."
+      }
+    },
+    {
+      "id": "operations.rollback",
+      "topic": "operations",
+      "title": "Deployment can be rolled back",
+      "expected": "A previous version can be restored within the agreed time, including database migrations.",
+      "severity": "blocker",
+      "verification": {
+        "method": "Rehearsed rollback in staging.",
+        "environments": [
+          "ci",
+          "manual"
+        ]
+      },
+      "task": {
+        "title": "Rehearse a rollback",
+        "description": "Deploy and roll back in staging, including migrations; record the time."
+      },
+      "evidence": {
+        "junit": [],
+        "checks": [
+          "rollback"
+        ]
+      }
+    }
+  ]
+}

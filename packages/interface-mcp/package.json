@@ -1,0 +1,28 @@
+{
+  "name": "@ai-plugin-toolkit/interface-mcp",
+  "version": "0.0.0",
+  "private": true,
+  "description": "MCP (Model Context Protocol) interface for Context Loom (working name).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*",
+    "@ai-plugin-toolkit/memory": "workspace:*",
+    "@ai-plugin-toolkit/retrieval": "workspace:*",
+    "@ai-plugin-toolkit/acceptance": "workspace:*",
+    "@ai-plugin-toolkit/artifacts": "workspace:*",
+    "@ai-plugin-toolkit/task-sync": "workspace:*",
+    "@modelcontextprotocol/sdk": "1.32.0",
+    "zod": "4.6.7"
+  }
+}

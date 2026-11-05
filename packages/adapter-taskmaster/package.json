@@ -1,0 +1,27 @@
+{
+  "name": "@ai-plugin-toolkit/adapter-taskmaster",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Task Master (task-master-ai) task adapter for Context Loom (working name).",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@ai-plugin-toolkit/core": "workspace:*",
+    "@ai-plugin-toolkit/adapter-beads": "workspace:*",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@ai-plugin-toolkit/task-sync": "workspace:*",
+    "@ai-plugin-toolkit/acceptance": "workspace:*",
+    "@ai-plugin-toolkit/storage-sqlite": "workspace:*"
+  }
+}
