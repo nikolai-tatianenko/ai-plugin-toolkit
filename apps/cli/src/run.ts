@@ -1,3 +1,4 @@
+import { workspaceCommand } from "./commands/workspace.js";
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { parseArgs } from "node:util";
@@ -111,6 +112,24 @@ Tasks
   tasks conflicts            Remote edits waiting for a decision
   tasks resolve <task-id>    --keep remote (stop updating it) | --keep local (publish over the edit)
 
+Workspace extensions
+  checklists templates | template save --file <json> [--expected-revision <n>]
+  checklists template show|delete <id>   Read/remove a reusable template
+  checklists create <id> --template <id> Create an independent evidence checklist
+  checklists list | show|report|export <id> | archive <id> --expected-revision <n>
+                             Use answer/evidence/waive/accept with --pack <instance-id>
+  profile show | set --file <json> | delete   Private identity, goals and preferences
+  notes list|show|put|delete --layer user|shared|server [--file <json>]
+  notes context              Bounded user + shared + cached server memory
+  checkpoints list|show|delete   Local untrusted working checkpoints, never auto-synced
+  reviews define <name> --file <json> | targets | show|delete <name>
+  reviews preview|publish <name> --checklists <id,id>   Configurable GitHub PR / GitLab MR
+  hooks manifest|install|uninstall --client claude|codex [--dry-run]
+  hook run|usage --client claude|codex   Native hook/usage JSON on stdin/stdout
+  hook proxy --client codex    Transparent app-server proxy with measured usage checkpoints
+  memory-server pull|push|serve   Optional shared-memory server (push requires --expected-revision)
+  Updates/deletes require --expected-revision from the previous read; creates use 0.
+
 Agents and inspection
   mcp                        MCP server over stdio for this project (read tools; writes if mcp.allowWrites)
   inspect [--port <n>]       Read-only web inspector on 127.0.0.1 (token-protected URL)
@@ -182,6 +201,11 @@ const OPTIONS = {
   "from-git": { type: "boolean", default: false },
   file: { type: "string" },
   format: { type: "string" },
+  template: { type: "string" },
+  layer: { type: "string" },
+  client: { type: "string" },
+  checklists: { type: "string" },
+  "expected-revision": { type: "string" },
 } as const;
 
 type OptionName = keyof typeof OPTIONS;
@@ -216,6 +240,11 @@ const ok = async (result: Promise<CommandResult>): Promise<Outcome> => ({ result
 const base = (inv: Invocation) => ({ rootDir: inv.rootDir, env: inv.env });
 
 const COMMANDS: Command[] = [
+  ...["checklists", "profile", "notes", "checkpoints", "reviews", "hooks", "memory-server"].map((family): Command => ({
+    words: [family], args: [1, 4], options: ["file", "out", "template", "layer", "client", "checklists", "expected-revision", "dry-run", "port"],
+    usage: `loom ${family} <action> (see loom help)`,
+    run: inv => ok(workspaceCommand({ ...base(inv), cwd: inv.cwd, family, args: inv.args, values: inv.values })),
+  })),
   {
     words: ["init"],
     args: 0,

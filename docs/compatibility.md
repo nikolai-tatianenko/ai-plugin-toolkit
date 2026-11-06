@@ -13,3 +13,5 @@
 | Browsers (inspector) | Chromium via Playwright 1.63.0 | other browsers expected to work, not tested |
 
 Schema migrations are forward-only. A newer database is refused by an older build without modification. A backup is written before migrating an existing database.
+
+Workspace extensions: schema v4; GitHub REST PR and GitLab REST MR adapters tested with deterministic transports, not live host accounts. The optional memory server is exercised over real loopback HTTP with authentication and revision conflicts. Claude/Codex native JSON hooks and generated shell commands are exercised locally. Real native host sessions are not verified here. See [workspace setup and telemetry limitations](workspace.md).

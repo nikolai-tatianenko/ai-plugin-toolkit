@@ -2,6 +2,14 @@
 
 All notable changes. Versions follow the plan's milestones. Nothing has been published to a package registry.
 
+## Unreleased
+
+- Add reusable checklist templates and evidence-backed instances with snapshot isolation and optimistic concurrency.
+- Add configurable GitHub PR / GitLab MR preview and create/update adapters.
+- Add private user profiles/goals, user/shared/server memory layers, optional authenticated single-project memory server and portable project state.
+- Add modular Claude/Codex hooks, safe configuration merge/uninstall, self-reflection, pre-compaction checkpoints and a measured 70% usage policy with telemetry bridges.
+- Add schema v4 for revisioned project-scoped plugin documents and gated MCP checklist/shared-memory tools.
+
 ## 0.4.0 (unreleased)
 
 Release candidate covering milestones v0.1 to v0.4. The release gate (CL-022) still needs a license decision, the real-upstream adapter runs, and explicitly authorized publication. Run `pnpm release:check`.
