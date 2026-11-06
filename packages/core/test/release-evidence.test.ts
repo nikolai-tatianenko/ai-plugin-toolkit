@@ -3,7 +3,7 @@ import { existsSync, mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { selectedTests, sourceDigest, validateEvidence } from "../../../scripts/release-evidence.mjs";
+import { SUITES, selectedTests, sourceDigest, validateEvidence } from "../../../scripts/release-evidence.mjs";
 
 const work: string[] = [];
 afterEach(() => { for (const dir of work.splice(0)) rmSync(dir, { recursive: true, force: true }); });
@@ -49,7 +49,7 @@ describe("release execution evidence", () => {
   });
   it("requires real extraction metadata and refuses Linux evidence for macOS", () => {
     expect(() => validateEvidence(receipt("anthropic", { tests: [{ name: "live extraction: anthropic", status: "passed" }] }), "anthropic", "snapshot")).toThrow(/extraction/);
-    const tests = ["frozen-install", "build", "bundle", "packed-install", "offline-demo", "idempotency"].map((name) => ({ name, status: "passed" }));
+    const tests = SUITES.macos.groups.map((name) => ({ name, status: "passed" }));
     expect(() => validateEvidence(receipt("macos", { tests }), "macos", "snapshot")).toThrow(/macOS/);
     expect(validateEvidence(receipt("macos", { tests, platform: "darwin" }), "macos", "snapshot")).toContain("darwin");
   });

@@ -7,3 +7,5 @@ export * from "./redact.js";
 export { VERSION } from "./version.js";
 export * from "./ingest.js";
 export * from "./extraction.js";
+
+export * from "./workspace-config.js";

@@ -21,5 +21,5 @@ Plan §4: each routing task (extraction, summary, planning, review) has a policy
 
 ## Consequences
 
-- One real provider in v0.1. Local inference (needed for A27 and fully local restricted projects) is not implemented; a restricted project can only use the fixture adapter today.
+- v0.1 started with one real provider. The current implementation also registers Ollama chat/embeddings for fully local projects, plus fixtures and a local hashing embedder. Live Claude/Ollama execution receipts remain required for release.
 - Pricing must be kept current by hand until a pricing source is integrated.

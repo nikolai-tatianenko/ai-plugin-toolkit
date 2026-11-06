@@ -51,6 +51,15 @@
     },
     {
       "path": "apps/eval"
+    },
+    {
+      "path": "packages/workspace"
+    },
+    {
+      "path": "packages/hooks"
+    },
+    {
+      "path": "packages/review"
     }
   ]
 }

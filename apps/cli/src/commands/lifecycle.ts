@@ -1,3 +1,4 @@
+import { exportWorkspace, importWorkspace, parseWorkspace } from "@ai-plugin-toolkit/workspace";
 import { readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ARTIFACT_TYPES, generateArtifacts } from "@ai-plugin-toolkit/artifacts";
@@ -133,7 +134,7 @@ export async function forgetCommand(options: Base & { sources: string[]; yes: bo
 export async function exportCommand(options: Base & { out?: string | undefined; cwd: string }): Promise<CommandResult> {
   if (options.out === undefined) throw new UsageError("Usage: loom export --out <file.json>");
   return withProject(options.rootDir, options, async (ctx) => {
-    const data = await exportProject(ctx.store, ctx.projectId, ctx.loaded.config.project.name);
+    const data = { ...await exportProject(ctx.store, ctx.projectId, ctx.loaded.config.project.name), workspace: exportWorkspace(ctx.store, ctx.projectId) };
     const file = path.resolve(options.cwd, options.out!);
     await writeFile(file, `${JSON.stringify(data, null, 2)}\n`, { flag: "wx" }).catch((cause: NodeJS.ErrnoException) => {
       if (cause.code === "EEXIST") throw new LoomError("ALREADY_EXISTS", `${file} exists; refusing to overwrite.`);
@@ -154,7 +155,10 @@ export async function exportCommand(options: Base & { out?: string | undefined; 
 export async function importCommand(options: Base & { file: string; cwd: string }): Promise<CommandResult> {
   const raw = JSON.parse(await readFile(path.resolve(options.cwd, options.file), "utf8")) as unknown;
   return withProject(options.rootDir, options, async (ctx) => {
+    const workspace = parseWorkspace((raw as { workspace?: unknown }).workspace);
+    if (exportWorkspace(ctx.store, ctx.projectId).length > 0) throw new LoomError("ALREADY_EXISTS", "Import requires empty workspace state.");
     const counts = await importProject(ctx.store, ctx.projectId, raw, ctx.actor);
+    importWorkspace(ctx.store, ctx.projectId, workspace, ctx.actor);
     return { data: counts, lines: [`Imported ${counts.sources} source(s), ${counts.facts} fact(s), ${counts.decisions} decision(s).`] };
   });
 }

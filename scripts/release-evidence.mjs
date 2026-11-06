@@ -14,7 +14,7 @@ export const SUITES = {
   },
   anthropic: { files: ["apps/cli/test/live-extraction.test.ts"], groups: ["live extraction: anthropic"] },
   ollama: { files: ["apps/cli/test/live-extraction.test.ts"], groups: ["live extraction: ollama"] },
-  macos: { groups: ["frozen-install", "build", "bundle", "packed-install", "offline-demo", "idempotency"] },
+  macos: { groups: ["frozen-install", "build", "bundle", "packed-install", "offline-demo", "idempotency", "workspace-checklists", "workspace-memory-hooks"] },
 };
 
 export function sourceFiles(root) {

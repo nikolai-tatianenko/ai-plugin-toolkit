@@ -245,6 +245,15 @@ Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
 
 ---
 
+## Workspace extensions
+
+- Create/edit versioned checklist templates and independent instances; reuse the existing evidence and readiness engine.
+- Define GitHub PR / GitLab MR targets, preview checklist reports, then explicitly create/update the selected request.
+- Store private user identity/goals/preferences separately from shared project memory; optionally pull/push a third server layer.
+- Install modular Claude/Codex lifecycle hooks for self-reflection, pre-compaction checkpoints and measured 70% context thresholds.
+
+See [the complete setup guide](docs/workspace.md) for copyable configuration, commands, telemetry wiring and limitations. Codex needs a usage bridge for the exact threshold; native lifecycle hooks alone do not supply usage percentages. New code is tested locally; live hosts and external providers still need their own evidence.
+
 ## Commands at a glance
 
 | Area | Commands |
