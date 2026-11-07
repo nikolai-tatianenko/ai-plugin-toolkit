@@ -39,7 +39,7 @@ jobs:
       - name: Extraction evaluation (fixture provider)
         run: pnpm eval
       - name: Release gate (unverified release requirements reported as pending)
-        run: pnpm release:check --allow-pending=license,upstream,live,macos
+        run: pnpm release:check --allow-pending=upstream,live,macos
 
   macos:
     name: clean macOS install (node ${{ matrix.node }})

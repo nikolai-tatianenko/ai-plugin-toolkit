@@ -57,7 +57,7 @@ check("no local state or env files tracked", () => {
 });
 check("license chosen", () => {
   if (!existsSync(path.join(root, "LICENSE"))) throw new Error("no LICENSE file: the copyright holder must choose a license (docs/release.md)");
-  return readFileSync(path.join(root, "LICENSE"), "utf8").split("\n")[0];
+  return readFileSync(path.join(root, "LICENSE"), "utf8").split("\n")[0].trim();
 }, { pendingKey: "license" });
 check("required documents", () => {
   const missing = ["README.md", "CHANGELOG.md", "SECURITY.md", "CONTRIBUTING.md", "docs/quickstart.md", "docs/compatibility.md", "docs/release.md", "docs/data-lifecycle.md"].filter((f) => !existsSync(path.join(root, f)));
@@ -109,7 +109,6 @@ const icon = { pass: "✓", pending: "…", fail: "✗" };
 console.log("Release checks");
 for (const r of results) console.log(`  ${icon[r.status]} ${r.name}${r.detail ? ` — ${r.detail}` : ""}`);
 console.log("\nManual, explicitly authorised final steps (never run by this script):");
-console.log("  - choose the license and add LICENSE (copyright holder)");
 console.log("  - confirm the package/product name (npm view <name>) and trademark check");
 console.log("  - change repository visibility; publish the package (npm publish from dist-release/loom)");
 const failed = results.filter((r) => r.status === "fail");

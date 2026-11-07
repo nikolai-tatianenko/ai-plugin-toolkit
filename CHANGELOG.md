@@ -4,6 +4,8 @@ All notable changes. Versions follow the plan's milestones. Nothing has been pub
 
 ## Unreleased
 
+- License the project under Apache-2.0 (`LICENSE`, `NOTICE`); the bundle declares it.
+- Add a local verification runbook with a prompt for a local coding agent (`docs/local-verification.md`).
 - Add reusable checklist templates and evidence-backed instances with snapshot isolation and optimistic concurrency.
 - Add configurable GitHub PR / GitLab MR preview and create/update adapters.
 - Add private user profiles/goals, user/shared/server memory layers, optional authenticated single-project memory server and portable project state.
@@ -12,7 +14,7 @@ All notable changes. Versions follow the plan's milestones. Nothing has been pub
 
 ## 0.4.0 (unreleased)
 
-Release candidate covering milestones v0.1 to v0.4. The release gate (CL-022) still needs a license decision, the real-upstream adapter runs, and explicitly authorized publication. Run `pnpm release:check`.
+Release candidate covering milestones v0.1 to v0.4. The release gate (CL-022) still needs the real-upstream and live-model execution receipts, macOS verification, and explicitly authorized publication. Run `pnpm release:check`.
 
 ### Release verification follow-up
 - Require source-bound execution receipts for Beads, Task Master, real Claude/Ollama extraction, and clean macOS installation. Missing or skipped verification cannot produce READY.
