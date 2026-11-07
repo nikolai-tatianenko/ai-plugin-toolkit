@@ -14,6 +14,7 @@ import {
   type Source,
   type SourceInput,
 } from "@ai-plugin-toolkit/core";
+import { DocumentsRepo } from "./documents.js";
 import { Db } from "./db.js";
 import { readEvidenceFile, resolveEvidencePath, writeEvidenceFile } from "./evidence-files.js";
 import { MemoryRepo } from "./memory-repo.js";
@@ -78,6 +79,7 @@ export class LoomStore {
   readonly databasePath: string;
   private readonly db: DatabaseSync;
   private readonly handle: Db;
+  readonly documents: DocumentsRepo;
   readonly memory: MemoryRepo;
   readonly state: StateRepo;
   readonly routing: RoutingRepo;
@@ -92,6 +94,7 @@ export class LoomStore {
   private constructor(db: DatabaseSync, options: StoreOptions, databasePath: string) {
     this.db = db;
     this.handle = new Db(db);
+    this.documents = new DocumentsRepo(this.handle);
     this.memory = new MemoryRepo(this.handle);
     this.state = new StateRepo(this.handle);
     this.routing = new RoutingRepo(this.handle);

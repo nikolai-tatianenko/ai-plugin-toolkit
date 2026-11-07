@@ -211,6 +211,12 @@ Decisions recorded on 2026-11-03: the license stays pending (owner will decide l
 - Forgetting cannot reach backups, exports, git history, upstream systems or provider-side retention.
 - MCP and inspector are local-only; multi-user hosting needs an authorization design.
 
+### 14.4 Release verification follow-up (2026-11-05)
+
+The release gate now checks separate, source-bound execution receipts for Beads, Task Master, live Claude extraction, live local Ollama extraction, and a clean macOS installation. Adapter documentation text no longer counts as execution evidence. `pnpm verify:release -- <suite>` records passing scenarios and safe runtime metadata; skipped or failed tests cannot create a passing receipt. See [release instructions](../../docs/release.md).
+
+The macOS CI matrix covers clean installation and an installed packed CLI on Node 22 and 24. The live extraction workflow checks decisions versus proposals, exact quotes, retrieval, generated artifacts and rerun idempotency. Adding these checks does not establish that live providers or the user's Mac have passed them. Credentials, a running local model, current receipts, the license decision and publication remain pending until actually completed.
+
 ## References and status
 
 Architecture inspiration: [TencentDB Agent Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory). Inspiration is not a dependency decision. Verify the pinned upstream version/license before reusing code. The plan is based on the project discussion; no Beads/Task Master API compatibility has yet been established.

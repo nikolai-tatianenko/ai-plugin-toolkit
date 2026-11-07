@@ -1,3 +1,4 @@
+import { getChecklist } from "@ai-plugin-toolkit/workspace";
 import { activePackId, loadBuiltinPack, loadPackFile, type TopicPack } from "@ai-plugin-toolkit/acceptance";
 import { createBeadsAdapter } from "@ai-plugin-toolkit/adapter-beads";
 import { createTaskMasterAdapter } from "@ai-plugin-toolkit/adapter-taskmaster";
@@ -65,6 +66,7 @@ export async function withProject<T>(
   const actor = io.env.LOOM_ACTOR ?? io.env.USER ?? "cli";
   // Built-in packs load from the package; custom packs from the project file recorded at activation.
   const loadActivated = async (activation: { packId: string; source: string }): Promise<TopicPack> => {
+    if (activation.source === "workspace") return getChecklist(store, projectId, activation.packId).value.pack;
     if (activation.source === "builtin") return loadBuiltinPack(activation.packId);
     const pack = await loadPackFile(resolveProjectPath(loaded.rootDir, activation.source, "pack file"));
     if (pack.id !== activation.packId) throw new LoomError("CONFIG_INVALID", `${activation.source} now defines pack "${pack.id}", but "${activation.packId}" was activated from it.`);

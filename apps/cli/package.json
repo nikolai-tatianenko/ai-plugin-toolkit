@@ -35,7 +35,10 @@
     "@ai-plugin-toolkit/normalize": "workspace:*",
     "@ai-plugin-toolkit/interface-mcp": "workspace:*",
     "@modelcontextprotocol/sdk": "1.32.0",
-    "@ai-plugin-toolkit/inspector": "workspace:*"
+    "@ai-plugin-toolkit/inspector": "workspace:*",
+    "@ai-plugin-toolkit/workspace": "workspace:*",
+    "@ai-plugin-toolkit/hooks": "workspace:*",
+    "@ai-plugin-toolkit/review": "workspace:*"
   },
   "devDependencies": {
     "@ai-plugin-toolkit/router": "workspace:*"

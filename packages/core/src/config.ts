@@ -1,3 +1,4 @@
+import { MemorySettingsSchema } from "./workspace-config.js";
 import path from "node:path";
 import { z } from "zod";
 import { LoomError } from "./errors.js";
@@ -105,6 +106,7 @@ export const LoomConfigSchema = z
         allowWrites: z.boolean().default(false),
       })
       .default({ allowWrites: false }),
+    memory: MemorySettingsSchema.optional(),
     retention: z
       .strictObject({
         /** Sources older than this (by ingest time) are forgotten by `loom retention apply`. */

@@ -1,3 +1,5 @@
+import { loadBuiltinPack, loadPackFile } from "@ai-plugin-toolkit/acceptance";
+import { getChecklist } from "@ai-plugin-toolkit/workspace";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { resolveProjectPath } from "@ai-plugin-toolkit/core";
 import { createLoomMcpServer } from "@ai-plugin-toolkit/interface-mcp";
@@ -27,7 +29,8 @@ export async function mcpCommand(options: { rootDir: string; env: Readonly<Recor
     config,
     readStore,
     openWriteStore: () => LoomStore.open({ storageDir: loaded.storageDir }),
-    loadPacks: async () => packs,
+    loadPacks: async () => Promise.all(readStore.acceptance.activePacks(config.project.id).map(p =>
+      p.source === "builtin" ? loadBuiltinPack(p.packId) : p.source === "workspace" ? getChecklist(readStore, config.project.id, p.packId).value.pack : loadPackFile(resolveProjectPath(loaded.rootDir, p.source, "pack file")))),
     artifactsDir: resolveProjectPath(loaded.rootDir, config.artifacts.dir, "artifacts.dir"),
     ...(adapterFactory === undefined ? {} : { taskAdapter: adapterFactory }),
     actor,
