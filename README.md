@@ -4,7 +4,7 @@
 
 `#ai` `#llm` `#agents` `#project-memory` `#rag` `#provenance` `#acceptance-testing` `#mcp` `#claude` `#ollama` `#local-first` `#sqlite` `#typescript` `#nodejs` `#cli` `#beads` `#task-master` `#developer-tools` `#open-source`
 
-> **Status: 0.4.0 release candidate, not published, not fully release-ready.** Core features (v0.1–v0.4) are implemented. Release verification requires current execution receipts for both task adapters, real Claude/Ollama extraction, and a clean macOS installation. A license choice and publication are also pending. See [What is left](#what-is-left).
+> **Status: 0.4.0 release candidate, not published, not fully release-ready.** Core features (v0.1–v0.4) are implemented. Release verification requires current execution receipts for both task adapters, real Claude/Ollama extraction, and a clean macOS installation. Licensed under Apache-2.0; publication is still pending. See [What is left](#what-is-left).
 
 ---
 
@@ -394,7 +394,7 @@ Acceptance scenarios A01–A27 are mapped in the [test plan](.tasks/test-plan/CO
 | Beads adapter against a real `bd` | ⏳ written and unit-tested; **not run against the real tool** |
 | Task Master adapter against a real `task-master` | ⏳ written and unit-tested; **not run against the real tool** |
 | Live model runs (Claude, real Ollama) | ⏳ tested against local stand-ins only |
-| License | ⏳ owner decision pending (no `LICENSE` file yet) |
+| License | ✅ Apache-2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)) |
 | Publication (public repo, npm) | ⏳ not done, explicit final step |
 
 Do not rely on the task-tracker integration in production until the real-tool runs pass.
@@ -404,12 +404,11 @@ Do not rely on the task-tracker integration in production until the real-tool ru
 ## What is left
 
 1. Install `bd` 1.3.x and `task-master-ai` 0.43.x; run `pnpm verify:release -- beads` and `pnpm verify:release -- taskmaster` to record real execution evidence.
-2. Choose a license and add `LICENSE` ([docs/release.md](docs/release.md) compares MIT and Apache-2.0).
-3. Run `pnpm verify:release -- anthropic`, `ollama`, and `macos` with the required model environment variables and host. The gate requires all five receipts to match the current source snapshot; see [execution evidence](docs/release.md#execution-evidence-required-for-ready).
-4. `pnpm release:check` must print `READY` without pending exceptions. Human review of the evaluation datasets, advisory pack items, and a screen-reader pass remain recommended.
-5. Review, merge, tag `v0.4.0`, then publish (only with explicit authorisation).
+2. Run `pnpm verify:release -- anthropic`, `ollama`, and `macos` with the required model environment variables and host. The gate requires all five receipts to match the current source snapshot; see [execution evidence](docs/release.md#execution-evidence-required-for-ready).
+3. `pnpm release:check` must print `READY` without pending exceptions. Human review of the evaluation datasets, advisory pack items, and a screen-reader pass remain recommended.
+4. Review, merge, tag `v0.4.0`, then publish (only with explicit authorisation).
 
-The full list is in [plan §14](.tasks/plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md#14-remaining-work-as-of-2026-11-02).
+A step-by-step runbook (and a prompt you can give a local coding agent) is in [docs/local-verification.md](docs/local-verification.md). The full list is in [plan §14](.tasks/plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md#14-remaining-work-as-of-2026-11-02).
 
 ---
 
@@ -432,3 +431,9 @@ The full list is in [plan §14](.tasks/plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md
 ---
 
 *Context Loom is a working name. No benchmark, cost-saving or standards-compliance claim is made; all examples use synthetic data.*
+
+---
+
+## License
+
+Copyright 2026 Nikolai Tatianenko. Licensed under the [Apache License, Version 2.0](LICENSE).

@@ -30,12 +30,7 @@ await build({
 // Runtime data is loaded relative to the module (`../packs/`, `../ui-dist/`), so it sits next to lib/.
 cpSync(path.join(root, "packages/acceptance/packs"), path.join(out, "packs"), { recursive: true });
 cpSync(path.join(root, "packages/inspector/ui-dist"), path.join(out, "ui-dist"), { recursive: true });
-for (const f of ["README.md", "CHANGELOG.md", "SECURITY.md"]) cpSync(path.join(root, f), path.join(out, f));
-try {
-  cpSync(path.join(root, "LICENSE"), path.join(out, "LICENSE"));
-} catch {
-  // No license chosen yet; release:check reports this as a blocker.
-}
+for (const f of ["README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "NOTICE"]) cpSync(path.join(root, f), path.join(out, f));
 writeFileSync(path.join(out, "lib/loom-bin.mjs"), "#!/usr/bin/env node\nimport './loom.mjs';\n", { mode: 0o755 });
 writeFileSync(
   path.join(out, "package.json"),
@@ -46,10 +41,10 @@ writeFileSync(
       description: "Traceable project memory, evidence-based acceptance and task sync for AI-assisted delivery (working name).",
       type: "module",
       bin: { loom: "lib/loom-bin.mjs" },
-      files: ["lib", "packs", "ui-dist", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE"],
+      files: ["lib", "packs", "ui-dist", "README.md", "CHANGELOG.md", "SECURITY.md", "LICENSE", "NOTICE"],
       engines: rootPkg.engines,
-      license: process.env.LOOM_LICENSE ?? "UNLICENSED",
-      private: process.env.LOOM_LICENSE === undefined,
+      license: "Apache-2.0",
+      author: "Nikolai Tatianenko",
     },
     null,
     2,

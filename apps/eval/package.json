@@ -1,6 +1,7 @@
 {
   "name": "@ai-plugin-toolkit/eval",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "description": "Reproducible extraction evaluation over synthetic, annotated datasets.",
   "type": "module",
@@ -13,7 +14,9 @@
       "default": "./dist/harness.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b"
   },

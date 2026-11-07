@@ -1,6 +1,7 @@
 {
   "name": "@ai-plugin-toolkit/adapter-taskmaster",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "description": "Task Master (task-master-ai) task adapter for Context Loom (working name).",
   "type": "module",
@@ -10,7 +11,9 @@
       "default": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -b"
   },
