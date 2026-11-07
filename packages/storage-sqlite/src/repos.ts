@@ -187,6 +187,10 @@ export class AcceptanceRepo {
     );
   }
 
+  deactivatePack(projectId: string, packId: string): void {
+    this.db.run("DELETE FROM pack_activations WHERE project_id=? AND pack_id=?", projectId, packId);
+  }
+
   activePacks(projectId: string): Array<{ packId: string; packVersion: string; activatedAt: string; source: string }> {
     return this.db
       .all("SELECT * FROM pack_activations WHERE project_id = ? ORDER BY activated_at, pack_id", projectId)

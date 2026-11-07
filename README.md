@@ -4,7 +4,7 @@
 
 `#ai` `#llm` `#agents` `#project-memory` `#rag` `#provenance` `#acceptance-testing` `#mcp` `#claude` `#ollama` `#local-first` `#sqlite` `#typescript` `#nodejs` `#cli` `#beads` `#task-master` `#developer-tools` `#open-source`
 
-> **Status: 0.4.0 release candidate, not published, not fully release-ready.** All planned features (v0.1–v0.4) are implemented and tested (268 tests passing, CI green on Node 22 and 24). Still open: real runs of the Beads and Task Master adapters, a license choice, live model runs, and publication. See [What is left](#what-is-left).
+> **Status: 0.4.0 release candidate, not published, not fully release-ready.** Core features (v0.1–v0.4) are implemented. Release verification requires current execution receipts for both task adapters, real Claude/Ollama extraction, and a clean macOS installation. A license choice and publication are also pending. See [What is left](#what-is-left).
 
 ---
 
@@ -245,6 +245,15 @@ Full walkthrough: [docs/quickstart.md](docs/quickstart.md).
 
 ---
 
+## Workspace extensions
+
+- Create/edit versioned checklist templates and independent instances; reuse the existing evidence and readiness engine.
+- Define GitHub PR / GitLab MR targets, preview checklist reports, then explicitly create/update the selected request.
+- Store private user identity/goals/preferences separately from shared project memory; optionally pull/push a third server layer.
+- Install modular Claude/Codex lifecycle hooks for self-reflection, pre-compaction checkpoints and measured 70% context thresholds.
+
+See [the complete setup guide](docs/workspace.md) for copyable configuration, commands, telemetry wiring and limitations. Codex needs a usage bridge for the exact threshold; native lifecycle hooks alone do not supply usage percentages. New code is tested locally; live hosts and external providers still need their own evidence.
+
 ## Commands at a glance
 
 | Area | Commands |
@@ -380,7 +389,7 @@ Acceptance scenarios A01–A27 are mapped in the [test plan](.tasks/test-plan/CO
 
 | Area | State |
 | --- | --- |
-| Code for v0.1–v0.4 and the release gate | ✅ done, 268 tests passing, CI green (Node 22, 24) |
+| Code for v0.1–v0.4 and the release gate | ✅ implemented; automated build/test workflows on Node 22 and 24 |
 | Offline demo, bundled CLI, clean-clone install | ✅ verified |
 | Beads adapter against a real `bd` | ⏳ written and unit-tested; **not run against the real tool** |
 | Task Master adapter against a real `task-master` | ⏳ written and unit-tested; **not run against the real tool** |
@@ -394,10 +403,10 @@ Do not rely on the task-tracker integration in production until the real-tool ru
 
 ## What is left
 
-1. Install `bd` 1.3.x and `task-master-ai` 0.43.x, run `pnpm test`, and record the results (the real-tool suites run automatically).
+1. Install `bd` 1.3.x and `task-master-ai` 0.43.x; run `pnpm verify:release -- beads` and `pnpm verify:release -- taskmaster` to record real execution evidence.
 2. Choose a license and add `LICENSE` ([docs/release.md](docs/release.md) compares MIT and Apache-2.0).
-3. `pnpm release:check` must print `READY`.
-4. Optional but recommended: live model runs (`LOOM_LIVE_TESTS=1`), human review of the evaluation datasets, an official-source review of the advisory pack items, and a screen-reader pass.
+3. Run `pnpm verify:release -- anthropic`, `ollama`, and `macos` with the required model environment variables and host. The gate requires all five receipts to match the current source snapshot; see [execution evidence](docs/release.md#execution-evidence-required-for-ready).
+4. `pnpm release:check` must print `READY` without pending exceptions. Human review of the evaluation datasets, advisory pack items, and a screen-reader pass remain recommended.
 5. Review, merge, tag `v0.4.0`, then publish (only with explicit authorisation).
 
 The full list is in [plan §14](.tasks/plans/CONTEXT-LOOM-IMPLEMENTATION-PLAN.md#14-remaining-work-as-of-2026-11-02).

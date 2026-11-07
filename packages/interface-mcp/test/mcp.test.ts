@@ -123,3 +123,19 @@ describe("MCP interface", () => {
     await s.close();
   });
 });
+
+it("manages checklist templates and proposed shared memory through gated MCP tools", async () => {
+  const denied = await connect(false);
+  const memory = { id: "stack", text: "TypeScript", provenance: "User requested TypeScript", expectedRevision: 0 };
+  expect((await denied.call("loom_save_shared_memory", memory)).error).toBe(true);
+  await denied.close();
+  const allowed = await connect(true);
+  try {
+    expect((await allowed.call("loom_save_shared_memory", memory)).data.value.status).toBe("proposed");
+    const template = { format: "loom-checklist/1", id: "custom", version: "1.0.0", title: "Custom", items: [{ id: "tests", title: "Tests", expected: "Pass", environments: ["ci"] }] };
+    expect((await allowed.call("loom_save_checklist_template", { template, expectedRevision: 0 })).error).toBe(false);
+    expect((await allowed.call("loom_create_checklist", { template: "custom", id: "release" })).error).toBe(false);
+    expect((await allowed.call("loom_checklists")).data.instances[0].key).toBe("release");
+    expect((await allowed.call("loom_shared_memory")).data.notes[0].value.status).toBe("proposed");
+  } finally { await allowed.close(); }
+});

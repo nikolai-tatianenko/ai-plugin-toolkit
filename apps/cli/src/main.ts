@@ -10,7 +10,12 @@ process.on("warning", (warning) => {
 // Dynamic import so the filter above is installed before node:sqlite is loaded.
 const { run } = await import("./run.js");
 
-const exitCode = await run(process.argv.slice(2), {
+const argv = process.argv.slice(2);
+let first = 0;
+while (argv[first] === "--dir") first += 2;
+const hookIndex = argv[first] === "hook" ? first : -1;
+const nativeHook = hookIndex >= 0 && ["run", "usage", "proxy"].includes(argv[hookIndex + 1] ?? "");
+const exitCode = nativeHook ? await (await import("./native-hook.js")).runNativeHook(argv) : await run(argv, {
   cwd: process.cwd(),
   env: process.env,
   stdout: (text) => process.stdout.write(text),

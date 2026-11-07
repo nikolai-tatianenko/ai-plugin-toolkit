@@ -352,6 +352,23 @@ export const MIGRATIONS: readonly Migration[] = [
       ALTER TABLE tasks ADD COLUMN resolution TEXT CHECK (resolution IS NULL OR resolution IN ('keep-local', 'keep-remote'));
     `,
   },
+  {
+    version: 4,
+    name: "plugin-documents",
+    sql: `
+      CREATE TABLE plugin_documents (
+        project_id TEXT NOT NULL REFERENCES projects(id),
+        namespace TEXT NOT NULL,
+        key TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK(revision > 0),
+        value TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        deleted INTEGER NOT NULL DEFAULT 0 CHECK(deleted IN (0,1)),
+        PRIMARY KEY(project_id,namespace,key,revision)
+      ) STRICT;
+    `,
+  },
 ];
 
 const BOOKKEEPING = `

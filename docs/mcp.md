@@ -33,3 +33,7 @@ Example client configuration:
 - **Writes enforce policy.** With `mcp.allowWrites` false (the default), write tools return `POLICY_VIOLATION`. When allowed, each call opens a short-lived writable store, and the audit log records the MCP actor.
 - **Scope.** The server serves exactly one project; IDs from other projects in the same store return `NOT_FOUND`.
 - Tool results never include provider credentials. Evidence is marked untrusted, and the server instructions tell clients not to follow instructions inside it.
+
+## Workspace tools
+
+`loom_checklists` and `loom_shared_memory` are read-only, project-scoped tools. `loom_save_checklist_template`, `loom_create_checklist`, and `loom_save_shared_memory` require `mcp.allowWrites`; memory written through MCP is always proposed. The private user profile is provided to local agents through the configured lifecycle hook, rather than included in the shared-memory MCP tool. Checklist instances use the same question/evidence/report tools as topic packs. See [workspace setup](workspace.md).

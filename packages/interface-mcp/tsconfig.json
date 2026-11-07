@@ -28,6 +28,9 @@
     },
     {
       "path": "../task-sync"
+    },
+    {
+      "path": "../workspace"
     }
   ]
 }

@@ -75,8 +75,10 @@ describe("A27: restricted project, local inference, network denied", () => {
   const blocked: string[] = [];
   const originalConnect = net.Socket.prototype.connect;
   const originalLookup = dns.lookup;
+  const originalFetch = globalThis.fetch;
 
   beforeEach(async () => {
+    blocked.length = 0;
     const fixture = JSON.parse(await readFile(path.join(examples, "fixtures/extraction.json"), "utf8")) as { responses: Array<{ json: unknown }> };
     server = createServer((req, res) => {
       let raw = "";
@@ -95,9 +97,21 @@ describe("A27: restricted project, local inference, network denied", () => {
     });
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
     const isLoopback = (host: unknown) => typeof host === "string" && /^(127\.|::1$|localhost$)/.test(host);
+    // Some hosts provide a fetch transport outside Node's socket/DNS implementation.
+    // Guard the request boundary as well so those hosts cannot bypass this test policy.
+    globalThis.fetch = async (input, init) => {
+      const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
+      if (!isLoopback(url.hostname.replace(/^\[|\]$/g, ""))) {
+        blocked.push(`fetch:${url.hostname}`);
+        throw new Error(`network denied: ${url.hostname}`);
+      }
+      return originalFetch(input, init);
+    };
     net.Socket.prototype.connect = function (this: net.Socket, ...args: unknown[]) {
-      const opts = args[0] as { host?: string; path?: string } | number;
-      const host = typeof opts === "object" ? (opts.path ? "unix" : (opts.host ?? "localhost")) : String(args[1] ?? "localhost");
+      // net.connect() passes an already-normalized argument array to Socket.connect().
+      const params = Array.isArray(args[0]) ? args[0] : args;
+      const opts = params[0] as { host?: string; path?: string } | number;
+      const host = typeof opts === "object" ? (opts.path ? "unix" : (opts.host ?? "localhost")) : String(params[1] ?? "localhost");
       if (host !== "unix" && !isLoopback(host)) {
         blocked.push(host);
         throw new Error(`network denied: ${host}`);
@@ -115,6 +129,7 @@ describe("A27: restricted project, local inference, network denied", () => {
     };
   });
   afterEach(async () => {
+    globalThis.fetch = originalFetch;
     net.Socket.prototype.connect = originalConnect;
     (dns as { lookup: unknown }).lookup = originalLookup;
     await new Promise<void>((r) => server.close(() => r()));
@@ -150,7 +165,11 @@ describe("A27: restricted project, local inference, network denied", () => {
   }, 60_000);
 
   it("the network guard really blocks outside connections", async () => {
-    await expect(fetch("https://api.anthropic.com/v1/models")).rejects.toThrow();
-    expect(blocked.length).toBeGreaterThan(0);
+    await expect(fetch("https://example.invalid/")).rejects.toThrow(/network denied/);
+    expect(() => net.connect({ host: "203.0.113.1", port: 443 })).toThrow(/network denied/);
+    await expect(new Promise((resolve, reject) => {
+      dns.lookup("example.invalid", (error, address) => error ? reject(error) : resolve(address));
+    })).rejects.toThrow(/DNS denied/);
+    expect(blocked).toHaveLength(3);
   });
 });

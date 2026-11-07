@@ -19,3 +19,5 @@ export {
   type SyncIntent,
   type SyncMappingRecord,
 } from "./repos.js";
+
+export { DocumentsRepo, type DocumentRecord } from "./documents.js";
