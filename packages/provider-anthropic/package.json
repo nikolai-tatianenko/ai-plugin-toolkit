@@ -1,7 +1,7 @@
 {
   "name": "@ai-plugin-toolkit/provider-anthropic",
   "version": "0.0.0",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "private": true,
   "description": "Anthropic Claude provider adapter for Context Loom (working name).",
   "type": "module",

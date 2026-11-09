@@ -4,7 +4,7 @@ All notable changes. Versions follow the plan's milestones. Nothing has been pub
 
 ## Unreleased
 
-- License the project under Apache-2.0 (`LICENSE`, `NOTICE`); the bundle declares it.
+- License the project under MIT (`LICENSE`); the bundle declares it.
 - Add a local verification runbook with a prompt for a local coding agent (`docs/local-verification.md`).
 - Add reusable checklist templates and evidence-backed instances with snapshot isolation and optimistic concurrency.
 - Add configurable GitHub PR / GitLab MR preview and create/update adapters.

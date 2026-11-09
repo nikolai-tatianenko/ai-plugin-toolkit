@@ -4,7 +4,7 @@
 
 `#ai` `#llm` `#agents` `#project-memory` `#rag` `#provenance` `#acceptance-testing` `#mcp` `#claude` `#ollama` `#local-first` `#sqlite` `#typescript` `#nodejs` `#cli` `#beads` `#task-master` `#developer-tools` `#open-source`
 
-> **Status: 0.4.0 release candidate, not published, not fully release-ready.** Core features (v0.1–v0.4) are implemented. Release verification requires current execution receipts for both task adapters, real Claude/Ollama extraction, and a clean macOS installation. Licensed under Apache-2.0; publication is still pending. See [What is left](#what-is-left).
+> **Status: 0.4.0 release candidate, not published, not fully release-ready.** Core features (v0.1–v0.4) are implemented. Release verification requires current execution receipts for both task adapters, real Claude/Ollama extraction, and a clean macOS installation. Licensed under MIT; publication is still pending. See [What is left](#what-is-left).
 
 ---
 
@@ -394,7 +394,7 @@ Acceptance scenarios A01–A27 are mapped in the [test plan](.tasks/test-plan/CO
 | Beads adapter against a real `bd` | ⏳ written and unit-tested; **not run against the real tool** |
 | Task Master adapter against a real `task-master` | ⏳ written and unit-tested; **not run against the real tool** |
 | Live model runs (Claude, real Ollama) | ⏳ tested against local stand-ins only |
-| License | ✅ Apache-2.0 ([LICENSE](LICENSE), [NOTICE](NOTICE)) |
+| License | ✅ MIT ([LICENSE](LICENSE)) |
 | Publication (public repo, npm) | ⏳ not done, explicit final step |
 
 Do not rely on the task-tracker integration in production until the real-tool runs pass.
@@ -436,4 +436,4 @@ A step-by-step runbook (and a prompt you can give a local coding agent) is in [d
 
 ## License
 
-Copyright 2026 Nikolai Tatianenko. Licensed under the [Apache License, Version 2.0](LICENSE).
+Copyright 2026 Nikolai Tatianenko. Licensed under the [MIT License](LICENSE).
