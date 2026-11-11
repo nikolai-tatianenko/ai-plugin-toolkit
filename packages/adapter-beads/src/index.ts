@@ -152,7 +152,7 @@ export class BeadsAdapter implements TaskAdapter {
     try {
       result = await this.options.exec(this.options.command, full, {
         cwd: this.options.cwd,
-        env: { ...this.options.env, BEADS_DIR: this.options.beadsDir, BD_NON_INTERACTIVE: "1" },
+        env: { ...this.options.env, BEADS_DIR: this.options.beadsDir, BD_NON_INTERACTIVE: "1", BD_DISABLE_METRICS: "1" },
         timeoutMs: this.options.timeoutMs,
       });
     } catch (cause) {
