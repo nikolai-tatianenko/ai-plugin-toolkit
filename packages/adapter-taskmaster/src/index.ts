@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { nodeExec, type Exec, type ExecResult } from "@ai-plugin-toolkit/adapter-beads";
@@ -73,6 +73,7 @@ export function parseTasksFile(text: string, tag: string): TmTask[] {
 }
 
 const ID = /^\d{1,9}$/;
+const TelemetryDisabledSchema = z.object({ global: z.object({ anonymousTelemetry: z.literal(false) }) });
 
 export class TaskMasterAdapter implements TaskAdapter {
   readonly manifest = {
@@ -100,6 +101,13 @@ export class TaskMasterAdapter implements TaskAdapter {
   }
 
   private async run(args: readonly string[]): Promise<string> {
+    const config = await readFile(this.configFile(), "utf8").catch((error: NodeJS.ErrnoException) => {
+      if (error.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (config === undefined || !this.telemetryDisabled(config)) {
+      throw new LoomError("POLICY_VIOLATION", 'Set "global.anonymousTelemetry" to false in .taskmaster/config.json before Loom runs Task Master.');
+    }
     let result: ExecResult;
     try {
       result = await this.o.exec(this.o.command, args, { cwd: this.o.projectDir, env: this.o.env, timeoutMs: this.o.timeoutMs });
@@ -115,6 +123,18 @@ export class TaskMasterAdapter implements TaskAdapter {
       });
     }
     return result.stdout;
+  }
+
+  private configFile(): string {
+    return path.join(this.o.projectDir, ".taskmaster", "config.json");
+  }
+
+  private telemetryDisabled(config: string): boolean {
+    try {
+      return TelemetryDisabledSchema.safeParse(JSON.parse(config)).success;
+    } catch {
+      return false;
+    }
   }
 
   async checkVersion(): Promise<string> {
@@ -142,14 +162,30 @@ export class TaskMasterAdapter implements TaskAdapter {
 
   /** Create `.taskmaster/` without prompts, aliases, git changes or dependency installs. */
   async initialize(): Promise<"created" | "existing"> {
-    await this.checkVersion();
+    const file = this.file();
     try {
-      await readFile(this.file(), "utf8");
+      await readFile(file, "utf8");
+      await this.checkVersion();
       return "existing";
-    } catch {
-      await this.run(["init", "--yes", "--skip-install", "--no-aliases", "--no-git"]);
-      return "created";
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
+    const config = this.configFile();
+    await mkdir(path.dirname(config), { recursive: true });
+    try {
+      await writeFile(config, '{\n  "global": { "anonymousTelemetry": false }\n}\n', { flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    await this.checkVersion();
+    await this.run(["init", "--yes", "--skip-install", "--no-aliases", "--no-git"]);
+    await mkdir(path.dirname(file), { recursive: true });
+    try {
+      await writeFile(file, `${JSON.stringify({ [this.o.tag]: { tasks: [] } }, null, 2)}\n`, { flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+    }
+    return "created";
   }
 
   async readTasks(): Promise<ExternalTask[]> {

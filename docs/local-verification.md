@@ -1,6 +1,6 @@
 # Local verification runbook
 
-The release gate (`pnpm release:check`) needs five execution receipts that cannot be produced in a cloud sandbox: real Beads, real Task Master, a live Claude extraction, a local Ollama extraction, and a clean macOS installation. Run them on your own machine (a Mac covers all five).
+The release gate (`pnpm release:check`) needs five execution receipts: real Beads, real Task Master, a live Claude extraction, a local Ollama extraction, and a clean macOS installation. A Mac can run all five. You can also download the macOS receipt from GitHub Actions for the same source snapshot and run the other suites on Linux.
 
 Receipts are bound to a SHA-256 digest of the source. Do not edit tracked files between collecting receipts and running `pnpm release:check`. Any edit invalidates the receipts.
 
@@ -35,7 +35,7 @@ pnpm verify:release -- taskmaster
 ```
 
 ```bash
-LOOM_ANTHROPIC_MODEL=claude-opus-5-5 pnpm verify:release -- anthropic
+LOOM_ANTHROPIC_MODEL='your-model-id' pnpm verify:release -- anthropic
 ```
 
 ```bash
@@ -78,7 +78,7 @@ on branch BRANCH=main (latest code). Do not publish anything.
 4. Collect receipts, one at a time, and report each result:
    pnpm verify:release -- beads
    pnpm verify:release -- taskmaster
-   LOOM_ANTHROPIC_MODEL=claude-opus-5-5 pnpm verify:release -- anthropic   (one paid API call, small)
+   LOOM_ANTHROPIC_MODEL='your-model-id' pnpm verify:release -- anthropic
    LOOM_OLLAMA_MODEL=<an installed chat model> pnpm verify:release -- ollama
    pnpm verify:release -- macos   (only on macOS)
 5. Run pnpm release:check (no --allow-pending) and show the full summary table.

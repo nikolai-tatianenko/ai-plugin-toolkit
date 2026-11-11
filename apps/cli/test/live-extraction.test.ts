@@ -36,7 +36,11 @@ for (const provider of ["anthropic", "ollama"] as const) {
         const config = JSON.parse(await readFile(configFile, "utf8"));
         config.routing.extraction.maxAttempts = 1;
         config.routing.extraction.maxOutputTokens = 3000;
-        if (provider === "ollama") config.providers.local.baseUrl = process.env.LOOM_OLLAMA_URL ?? "http://127.0.0.1:11434";
+        if (provider === "ollama") {
+          config.providers.local.baseUrl = process.env.LOOM_OLLAMA_URL ?? "http://127.0.0.1:11434";
+          // Leave room for a cold model load and CPU-only inference on the verification host.
+          config.routing.extraction.timeoutMs = 240_000;
+        }
         await writeFile(configFile, JSON.stringify(config));
         await loom(["ingest", "conversation.json"]);
         const extraction = await loom(["extract"]);

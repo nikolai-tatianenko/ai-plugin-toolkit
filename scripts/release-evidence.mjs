@@ -1,7 +1,23 @@
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
+
+export function taskMasterVersion(command) {
+  const dir = mkdtempSync(path.join(tmpdir(), "loom-taskmaster-version-"));
+  try {
+    mkdirSync(path.join(dir, ".taskmaster"));
+    writeFileSync(path.join(dir, ".taskmaster/config.json"), '{"global":{"anonymousTelemetry":false}}');
+    return execFileSync(command, ["--version"], {
+      cwd: dir,
+      env: { PATH: process.env.PATH, HOME: dir, USERPROFILE: dir, SystemRoot: process.env.SystemRoot, CI: "1" },
+      encoding: "utf8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"],
+    });
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 export const SUITES = {
   beads: {

@@ -34,6 +34,7 @@ Sources read: [README](https://github.com/eyaltoledano/claude-task-master/blob/t
 - Reads parse `.taskmaster/tasks/tasks.json` (tagged format, tag configurable; legacy format accepted). The idempotency key is stored as a `loom-idempotency-key:` line in `details`. The revision is a hash of title, description, details, status and dependencies.
 - **Declared capabilities:** readTasks, createTask, linkDependency. **Not supported:** updateTask (no non-AI update upstream) and readChanges. Sync reports each local update as `UNSUPPORTED_CAPABILITY`, and `tasks resolve --keep local` is unavailable.
 - Version gate: 0.43.x (`LOOM_TASKMASTER_ALLOW_UNTESTED=1` to override).
+- Task Master enables outbound telemetry by default. Loom requires `"anonymousTelemetry": false` inside `global` in `.taskmaster/config.json` before launching it. On a fresh project, `loom tasks init` creates that configuration and the empty tagged task file. For an existing configuration, set the flag alongside the other `global` settings. Loom preserves the existing file.
 - Tests: unit tests and the shared sync scenarios against a fake CLI that edits `tasks.json` the documented way (shapes only). The real-binary suite `taskmaster.integration.test.ts` runs when `task-master` 0.43.x is installed (`LOOM_TASKMASTER_BIN`); **not yet run**.
 
 ## Real test strategy

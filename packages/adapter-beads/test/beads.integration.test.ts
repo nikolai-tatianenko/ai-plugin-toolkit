@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { createBeadsAdapter, nodeExec, parseVersion, SUPPORTED_BEADS, type Exec } from "../src/index.js";
 import { syncScenarios } from "../../task-sync/test/scenarios.js";
 
@@ -32,6 +32,8 @@ if ("skip" in found) {
     it.skip(`SKIPPED — real Beads integration not run: ${found.skip}`, () => {});
   });
 } else {
+  // Real Dolt initialization and repeated CLI calls take longer than the unit-test budget.
+  vi.setConfig({ hookTimeout: 60_000, testTimeout: 180_000 });
   describe(`Beads adapter against real bd ${found.version}`, () => {
     syncScenarios(async (workDir) => {
       let writes = 0;
