@@ -94,8 +94,8 @@ export async function tasksSyncCommand(options: Base): Promise<{ result: Command
 export async function tasksInitCommand(options: Base): Promise<CommandResult> {
   return withProject(options.rootDir, options, async (ctx) => {
     const adapter = ctx.taskAdapter();
-    const version = await adapter.checkVersion();
     const status = await adapter.initialize();
+    const version = await adapter.checkVersion();
     const name = adapter.manifest.upstream.name;
     return { data: { adapter: adapter.manifest.name, version, status }, lines: [`${name} ${version}: ${status === "created" ? "initialized" : "already initialized"}.`] };
   });

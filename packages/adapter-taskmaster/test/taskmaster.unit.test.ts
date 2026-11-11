@@ -20,7 +20,6 @@ export function fakeTaskMaster(dir: string, calls: string[][] = [], version = "0
     if (args[0] === "--version") return { stdout: `${version}\n`, stderr: "", exitCode: 0 };
     if (args[0] === "init") {
       await mkdir(path.dirname(file), { recursive: true });
-      await writeFile(file, JSON.stringify({ master: { tasks: [] } }));
       return { stdout: "initialized", stderr: "", exitCode: 0 };
     }
     const data = await load();
@@ -48,6 +47,7 @@ describe("Task Master adapter (fake CLI)", () => {
     const calls: string[][] = [];
     const a = createTaskMasterAdapter({ projectDir: dir, exec: fakeTaskMaster(dir, calls) });
     expect(await a.initialize()).toBe("created");
+    expect(await a.initialize()).toBe("existing");
     expect(calls.find((c) => c[0] === "init")).toEqual(["init", "--yes", "--skip-install", "--no-aliases", "--no-git"]);
     const title = '-p "x"; rm -rf /';
     const t = await a.createTask({ title, description: "First line\nmore", idempotencyKey: "habit:tsk_1" });
@@ -79,9 +79,28 @@ describe("Task Master adapter (fake CLI)", () => {
 
   it("refuses an unreviewed version unless allowed", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "loom-tm-"));
+    await mkdir(path.join(dir, ".taskmaster"));
+    await writeFile(path.join(dir, ".taskmaster/config.json"), '{"global":{"anonymousTelemetry":false}}');
     await expect(createTaskMasterAdapter({ projectDir: dir, exec: fakeTaskMaster(dir, [], "0.50.0") }).readTasks()).rejects.toMatchObject({ code: "UNSUPPORTED_CAPABILITY" });
     await expect(createTaskMasterAdapter({ projectDir: dir, exec: fakeTaskMaster(dir, [], "0.50.0"), allowUntestedVersion: true }).readTasks()).resolves.toEqual([]);
     await rm(dir, { recursive: true, force: true });
+  });
+
+  it("preserves existing telemetry settings and blocks subprocesses until telemetry is disabled", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "loom-tm-"));
+    try {
+      const config = path.join(dir, ".taskmaster/config.json");
+      const original = '{"global":{"anonymousTelemetry":true}}';
+      await mkdir(path.dirname(config));
+      await writeFile(config, original);
+      const calls: string[][] = [];
+      const adapter = createTaskMasterAdapter({ projectDir: dir, exec: fakeTaskMaster(dir, calls) });
+      await expect(adapter.initialize()).rejects.toMatchObject({ code: "POLICY_VIOLATION" });
+      expect(calls).toEqual([]);
+      expect(await readFile(config, "utf8")).toBe(original);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });
 

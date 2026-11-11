@@ -1,15 +1,15 @@
-import { execFileSync } from "node:child_process";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import { createTaskMasterAdapter, SUPPORTED_TASKMASTER } from "../src/index.js";
 import { syncScenarios } from "../../task-sync/test/scenarios.js";
+import { taskMasterVersion } from "../../../scripts/release-evidence.mjs";
 
 /** Real integration against an installed `task-master` 0.43.x. Skipped, with the reason, otherwise. */
 function locate(): { bin: string } | { skip: string } {
   const bin = process.env.LOOM_TASKMASTER_BIN ?? "task-master";
   try {
-    const out = execFileSync(bin, ["--version"], { encoding: "utf8", timeout: 30_000, stdio: ["ignore", "pipe", "pipe"] });
+    const out = taskMasterVersion(bin);
     const [major, minor] = (/(\d+)\.(\d+)\.\d+/.exec(out) ?? []).slice(1).map(Number);
     if (major !== SUPPORTED_TASKMASTER.major || minor !== SUPPORTED_TASKMASTER.minor) return { skip: `task-master ${out.trim()} found; this suite targets ${SUPPORTED_TASKMASTER.label}` };
     return { bin };
@@ -24,12 +24,14 @@ if ("skip" in found) {
     it.skip(`SKIPPED — real Task Master integration not run: ${found.skip}`, () => {});
   });
 } else {
+  vi.setConfig({ hookTimeout: 60_000, testTimeout: 180_000 });
   describe("Task Master adapter against real task-master", () => {
     syncScenarios(async (workDir) => {
       let writes = 0;
       const adapter = createTaskMasterAdapter({
         command: found.bin,
         projectDir: workDir,
+        env: { PATH: process.env.PATH, HOME: workDir, USERPROFILE: workDir, SystemRoot: process.env.SystemRoot, CI: "1" },
         exec: async (file, args, options) => {
           if (["add-task", "add-dependency"].includes(args[0] ?? "")) writes++;
           const { nodeExec } = await import("@ai-plugin-toolkit/adapter-beads");
