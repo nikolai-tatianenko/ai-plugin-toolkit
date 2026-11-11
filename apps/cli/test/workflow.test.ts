@@ -136,7 +136,9 @@ describe("workflow 3: change set → preview → publish → rerun", () => {
 
   const bd = (() => {
     try {
-      return /\b1\.3\.\d+/.test(execFileSync(process.env.LOOM_BD_BIN ?? "bd", ["version"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }));
+      return /\b1\.3\.\d+/.test(execFileSync(process.env.LOOM_BD_BIN ?? "bd", ["version"], {
+        env: { ...process.env, BD_DISABLE_METRICS: "1" }, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"],
+      }));
     } catch {
       return false;
     }

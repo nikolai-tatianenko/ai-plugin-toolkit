@@ -14,7 +14,9 @@ function locateBd(): { bin: string; version: string } | { skip: string } {
   const bin = process.env.LOOM_BD_BIN ?? "bd";
   let out: string;
   try {
-    out = execFileSync(bin, ["version"], { encoding: "utf8", timeout: 20_000, stdio: ["ignore", "pipe", "pipe"] });
+    out = execFileSync(bin, ["version"], {
+      env: { ...process.env, BD_DISABLE_METRICS: "1" }, encoding: "utf8", timeout: 20_000, stdio: ["ignore", "pipe", "pipe"],
+    });
   } catch {
     return { skip: `"${bin}" is not runnable (set LOOM_BD_BIN or install Beads ${SUPPORTED_BEADS.label})` };
   }
@@ -50,7 +52,7 @@ if ("skip" in found) {
         editRemote: async (id, title) => {
           const result = await nodeExec(found.bin, ["update", id, `--title=${title}`, "--json"], {
             cwd: workDir,
-            env: { ...process.env, BEADS_DIR: beadsDir, BD_NON_INTERACTIVE: "1" },
+            env: { ...process.env, BEADS_DIR: beadsDir, BD_NON_INTERACTIVE: "1", BD_DISABLE_METRICS: "1" },
             timeoutMs: 60_000,
           });
           if (result.exitCode !== 0) throw new Error(result.stderr);

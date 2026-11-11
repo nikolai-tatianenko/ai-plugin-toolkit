@@ -45,7 +45,9 @@ try {
       env.LOOM_LIVE_RESULT_FILE = path.join(temp, "live-result.json");
     } else {
       const command = suite === "beads" ? process.env.LOOM_BD_BIN ?? "bd" : process.env.LOOM_TASKMASTER_BIN ?? "task-master";
-      const output = (suite === "beads" ? run(command, ["version"]) : taskMasterVersion(command)).trim();
+      const output = (suite === "beads"
+        ? run(command, ["version"], { env: { ...env, BD_DISABLE_METRICS: "1" } })
+        : taskMasterVersion(command)).trim();
       const version = output.match(/\b\d+\.\d+\.\d+\b/)?.[0];
       const supported = suite === "beads" ? /^1\.3\./ : /^0\.43\./;
       if (!version || !supported.test(version)) throw new Error(`${suite}: supported upstream binary required`);
