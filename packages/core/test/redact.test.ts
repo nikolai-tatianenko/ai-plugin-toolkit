@@ -21,4 +21,11 @@ describe("redaction", () => {
     expect(out.list).toEqual([REDACTED]);
     expect(input.token).toBe("t");
   });
+
+  it("preserves and redacts objects shared between change lists", () => {
+    const change = { kind: "create", title: "Add offline support", token: "private" };
+    const result = redactSecrets({ changes: [change], applied: [change] });
+    const redacted = { kind: "create", title: "Add offline support", token: REDACTED };
+    expect(result).toEqual({ changes: [redacted], applied: [redacted] });
+  });
 });

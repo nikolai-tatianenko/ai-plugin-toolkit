@@ -22,15 +22,19 @@ export function redactSecrets<T>(value: T): T {
   return redactValue(value, new WeakSet()) as T;
 }
 
-function redactValue(value: unknown, seen: WeakSet<object>): unknown {
+function redactValue(value: unknown, ancestors: WeakSet<object>): unknown {
   if (typeof value === "string") return redactString(value);
   if (value === null || typeof value !== "object") return value;
-  if (seen.has(value)) return "[Circular]";
-  seen.add(value);
-  if (Array.isArray(value)) return value.map((item) => redactValue(item, seen));
-  const out: Record<string, unknown> = {};
-  for (const [key, inner] of Object.entries(value)) {
-    out[key] = SECRET_KEY.test(key) && !SECRET_REFERENCE_KEY.test(key) && inner != null ? REDACTED : redactValue(inner, seen);
+  if (ancestors.has(value)) return "[Circular]";
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((item) => redactValue(item, ancestors));
+    const out: Record<string, unknown> = {};
+    for (const [key, inner] of Object.entries(value)) {
+      out[key] = SECRET_KEY.test(key) && !SECRET_REFERENCE_KEY.test(key) && inner != null ? REDACTED : redactValue(inner, ancestors);
+    }
+    return out;
+  } finally {
+    ancestors.delete(value);
   }
-  return out;
 }
