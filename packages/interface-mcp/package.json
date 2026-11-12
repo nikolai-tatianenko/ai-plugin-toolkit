@@ -1,7 +1,7 @@
 {
   "name": "@ai-plugin-toolkit/interface-mcp",
   "version": "0.0.0",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "private": true,
   "description": "MCP (Model Context Protocol) interface for Context Loom (working name).",
   "type": "module",

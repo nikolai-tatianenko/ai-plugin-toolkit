@@ -1,6 +1,6 @@
 {
   "name": "ai-plugin-toolkit",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.28.0",

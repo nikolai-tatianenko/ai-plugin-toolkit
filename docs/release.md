@@ -45,7 +45,7 @@ To diagnose a failed live workflow, run `LOOM_LIVE_TESTS=1 pnpm exec vitest run 
 | Item | State |
 | --- | --- |
 | Build, tests, eval, license audit (100 prod deps, all permissive), secret scan, docs, versions, bundle smoke | passing locally |
-| License | **Apache-2.0** (decided 2026-11-07; `LICENSE`, `NOTICE`, copyright Nikolai Tatianenko) |
+| License | **MIT** (decided 2026-11-08, matching quality-gates; `LICENSE`, copyright Nikolai Tatianenko) |
 | Real upstream runs (Beads, Task Master) | **pending**: real-binary suites exist but have not run |
 | Live model runs (Claude, Ollama) | not run here; real extraction workflows and receipts now required |
 | macOS clean installation | CI on Node 22/24 added; passing execution receipt required |
@@ -54,13 +54,13 @@ To diagnose a failed live workflow, run `LOOM_LIVE_TESTS=1 pnpm exec vitest run 
 
 ## License
 
-Apache-2.0, copyright 2026 Nikolai Tatianenko. All runtime dependencies use permissive licenses (MIT, Apache-2.0, ISC, BSD-2/3, Unlicense) compatible with it. The bundle (`pnpm bundle`) ships `LICENSE` and `NOTICE` and declares `"license": "Apache-2.0"`.
+MIT, copyright 2026 Nikolai Tatianenko. All runtime dependencies use permissive licenses (MIT, Apache-2.0, ISC, BSD-2/3, Unlicense) compatible with it. The bundle (`pnpm bundle`) ships `LICENSE` and declares `"license": "MIT"`.
 
 The Task Master adapter only invokes the separately installed `task-master` CLI. Task Master's Commons Clause restricts selling a product whose value derives substantially from Task Master; review this if Loom is offered commercially with Task Master as a central feature.
 
 ## Final steps (manual, in order)
 
-1. Confirm the package name (license: Apache-2.0, done). Finish source/documentation changes before collecting receipts.
+1. Confirm the package name (license: MIT, done). Finish source/documentation changes before collecting receipts.
 2. Run the five verification commands above ([docs/local-verification.md](local-verification.md)), including live extraction and macOS, and collect matching receipts. Update adapter notes and recollect receipts if documentation changes.
 3. Optionally run the larger `pnpm eval -- --provider anthropic` evaluation with a budget. The tiny live workflow establishes integration behavior, not a general extraction-quality benchmark.
 4. `pnpm release:check` with no `--allow-pending`: it must print `READY`.

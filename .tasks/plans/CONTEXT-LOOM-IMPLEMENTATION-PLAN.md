@@ -1,6 +1,6 @@
 # Context Loom implementation plan
 
-Status: v0.1–v0.4 and the release gate implemented in review (PR #4, see [tickets](../tickets/README.md)); license decided (Apache-2.0); real upstream runs and publication pending. What is left: [§14](#14-remaining-work-as-of-2026-11-02). Repository name remains ai-plugin-toolkit. Working product name is not finalized.
+Status: v0.1–v0.4 and the release gate implemented in review (PR #4, see [tickets](../tickets/README.md)); license decided (MIT); real upstream runs and publication pending. What is left: [§14](#14-remaining-work-as-of-2026-11-02). Repository name remains ai-plugin-toolkit. Working product name is not finalized.
 
 ## 1. End-to-end behavior
 
@@ -186,7 +186,7 @@ All tickets CL-001 to CL-022 have code in PR #4 (v0.1 to v0.4 plus the release g
 | 1 | Run the real Beads suites (A14–A17 against `bd` 1.3.x, CLI publish/rerun) and record results | CL-011, CL-012 | install `bd` 1.3.x, `pnpm test` |
 | 2 | Run the real Task Master suite against `task-master` 0.43.x and record results | CL-014 | install `task-master-ai@0.43.x`, `pnpm test` |
 | 3 | Fix any incompatibilities found in 1–2 | CL-011, CL-014 | — |
-| 4 | ~~Choose the license and add LICENSE~~ done: Apache-2.0 (2026-11-07); confirm the name (npm: `context-loom` not taken on 2026-11-02; trademark search pending) | CL-022 | owner decision, see docs/release.md |
+| 4 | ~~Choose the license and add LICENSE~~ done: MIT (2026-11-08); confirm the name (npm: `context-loom` not taken on 2026-11-02; trademark search pending) | CL-022 | owner decision, see docs/release.md |
 | 5 | `pnpm release:check` prints READY with no `--allow-pending` | CL-022 | after 1–4 |
 | 6 | Review and merge PR #4; tag v0.4.0; then (separately authorised) change visibility and publish | CL-022 | manual |
 

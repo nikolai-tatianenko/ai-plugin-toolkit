@@ -1,7 +1,7 @@
 {
   "name": "@ai-plugin-toolkit/core",
   "version": "0.0.0",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "private": true,
   "description": "Validated schemas, plugin contracts, configuration and stable IDs for Context Loom (working name).",
   "type": "module",
