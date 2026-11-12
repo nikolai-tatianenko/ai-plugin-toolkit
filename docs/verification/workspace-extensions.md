@@ -34,7 +34,7 @@ Environment: Linux, Node v24.22.1, pnpm 11.25.0. CI uses the repository-pinned p
 - Native Claude/Codex sessions were not run. Tests exercise real local CLI processes and simulated protocol input; the app-server proxy test uses a simulated executable.
 - GitHub/GitLab runtime review adapters were tested with deterministic HTTP transports; no live review was created through those adapters.
 - macOS CI must rerun for the new source snapshot and upload its new eight-scenario receipt. The user's own Mac remains unverified.
-- The license/name decision and publication remain pending. The strict gate requires current Beads, Task Master, Claude, Ollama and macOS receipts plus the license.
+- The project uses MIT. Product naming and publication remain pending. The strict gate requires current Beads, Task Master, Claude, Ollama and macOS receipts plus the license.
 - Existing 14 skips cover native upstream/live-provider suites and Chromium/browser scenarios unavailable locally. No new workspace scenario is skipped.
 - Optional memory service is single-project and token-authenticated, with loopback binding. Multi-tenant hosting and Windows shell hooks are outside this implementation.
 

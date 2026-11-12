@@ -1,7 +1,8 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { Server } from "node:http";
+import { request, type Server } from "node:http";
+import { setTimeout } from "node:timers/promises";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { LoomStore } from "@ai-plugin-toolkit/storage-sqlite";
 import { addEvidence, setRevision } from "@ai-plugin-toolkit/acceptance";
@@ -93,6 +94,39 @@ it("supports authenticated optional server push/pull with conflict protection an
   expect(layeredContext(user, store, "alpha").text).toContain("[server:shared@1]");
   const response = await fetch(`${url}/v1/projects/alpha/shared-memory`, { method: "PUT", headers: { Authorization: `Bearer ${token}` }, body: "{}" });
   expect(response.status).toBe(428);
+});
+
+it("preserves Unicode split across request chunks and enforces the byte limit", async () => {
+  const token = "test-token-with-at-least-24-characters";
+  server = createMemoryServer({ store, project: "alpha", token });
+  await new Promise<void>(resolve => server!.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address() as { port: number };
+  async function put(chunks: Buffer[]) {
+    const req = request(`http://127.0.0.1:${port}/v1/projects/alpha/shared-memory`, {
+      method: "PUT", headers: { Authorization: `Bearer ${token}`, "If-Match": '"0"' },
+    });
+    const response = new Promise<{ status: number; body: any }>((resolve, reject) => {
+      req.on("error", reject);
+      req.on("response", res => {
+        const received: Buffer[] = [];
+        res.on("error", reject);
+        res.on("data", chunk => received.push(chunk));
+        res.on("end", () => resolve({ status: res.statusCode!, body: JSON.parse(Buffer.concat(received).toString("utf8")) }));
+      });
+    });
+    for (const chunk of chunks) { req.write(chunk); await setTimeout(20); }
+    req.end();
+    return response;
+  }
+  const text = "Решение: SQLite 🚀";
+  const body = Buffer.from(JSON.stringify({ entries: [entry("unicode", text)] }));
+  const cyrillic = body.indexOf(Buffer.from("Р")) + 1;
+  const emoji = body.indexOf(Buffer.from("🚀")) + 2;
+  const saved = await put([body.subarray(0, cyrillic), body.subarray(cyrillic, emoji), body.subarray(emoji)]);
+  expect(saved.status).toBe(200);
+  expect(saved.body.entries[0].text).toBe(text);
+  expect(store.documents.get<any>("alpha", "server.snapshot", "shared")!.value.entries[0].text).toBe(text);
+  expect((await put([Buffer.alloc(1024 * 1024 + 1, "x")])).status).toBe(413);
 });
 
 it("rejects unsafe endpoints and assistant checkpoints in server snapshots", async () => {

@@ -4,6 +4,8 @@ All notable changes. Versions follow the plan's milestones. Nothing has been pub
 
 ## Unreleased
 
+- Preserve Unicode in shared-memory uploads when UTF-8 characters span request chunks; enforce the upload limit in bytes.
+- Explain the intended audience, end-to-end workflow and workspace extensions in the README.
 - License the project under MIT (`LICENSE`); the bundle declares it.
 - Add a local verification runbook with a prompt for a local coding agent (`docs/local-verification.md`).
 - Add reusable checklist templates and evidence-backed instances with snapshot isolation and optimistic concurrency.

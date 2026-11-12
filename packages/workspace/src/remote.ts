@@ -82,9 +82,13 @@ export function createMemoryServer(options: { store: LoomStore; project: string;
       if (req.method !== "PUT") { send(405, { error: "method-not-allowed" }); return; }
       const match = req.headers["if-match"]?.toString().match(/^"(\d+)"$/);
       if (!match) { send(428, { error: "if-match-required" }); return; }
-      let body = "";
-      for await (const chunk of req) { body += chunk.toString(); if (Buffer.byteLength(body) > 1024 * 1024) { send(413, { error: "too-large" }); return; } }
-      const snapshot = parseWith(SnapshotSchema, JSON.parse(body), "shared snapshot");
+      const chunks: Buffer[] = []; let bytes = 0;
+      for await (const chunk of req) {
+        bytes += chunk.length;
+        if (bytes > 1024 * 1024) { send(413, { error: "too-large" }); return; }
+        chunks.push(chunk);
+      }
+      const snapshot = parseWith(SnapshotSchema, JSON.parse(Buffer.concat(chunks).toString("utf8")), "shared snapshot");
       const saved = options.store.documents.put(options.project, "server.snapshot", "shared", snapshot, "server-client", Number(match[1]));
       send(200, { revision: saved.revision, entries: saved.value.entries });
     } catch (error) {

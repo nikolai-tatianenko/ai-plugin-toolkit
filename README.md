@@ -2,7 +2,9 @@
 
 **Traceable project memory, evidence-based acceptance and task sync for AI-assisted delivery.**
 
-`#ai` `#llm` `#agents` `#project-memory` `#rag` `#provenance` `#acceptance-testing` `#mcp` `#claude` `#ollama` `#local-first` `#sqlite` `#typescript` `#nodejs` `#cli` `#beads` `#task-master` `#developer-tools` `#open-source`
+Context Loom is a local-first CLI and TypeScript toolkit for developers who work with AI coding assistants across many sessions. It turns conversations and project documents into searchable facts, decisions and requirements with links back to their original text. It also connects delivery checklists to evidence from the current build, so you can see what is known, what remains open and what has actually been verified.
+
+For example, you decide that an app must work offline and use SQLite. An assistant later suggests PostgreSQL. Loom keeps your decision and the assistant's proposal separate, makes their source quotes available to the next session, and tracks whether the offline requirement has passing evidence for the current revision.
 
 > **Status: 0.4.0 release candidate, not published, not fully release-ready.** Core features (v0.1–v0.4) are implemented. Release verification requires current execution receipts for both task adapters, real Claude/Ollama extraction, and a clean macOS installation. Licensed under MIT; publication is still pending. See [What is left](#what-is-left).
 
@@ -11,9 +13,12 @@
 ## Contents
 
 - [Why does this exist?](#why-does-this-exist)
+- [Who is it for?](#who-is-it-for)
+- [A typical workflow](#a-typical-workflow)
 - [What it does](#what-it-does)
 - [How it works](#how-it-works)
 - [Quick start](#quick-start)
+- [Workspace extensions](#workspace-extensions)
 - [Commands at a glance](#commands-at-a-glance)
 - [Configuration](#configuration)
 - [Architecture](#architecture)
@@ -45,7 +50,26 @@ Context Loom keeps a **verifiable project memory** next to your work:
 - Tasks are **published to the tracker you already use** (Beads, Task Master), and your manual edits there are never silently overwritten.
 - It is **local-first**: SQLite in your project. Remote models are used only as configured, and restricted projects can never reach them.
 
-In short, it answers: *what do we know, what was decided, what changed, what is still unanswered, what should happen next, and what evidence supports delivery?*
+It answers: *what do we know, what was decided, what changed, what is still unanswered, what should happen next, and what evidence supports delivery?*
+
+## Who is it for?
+
+- **Developers using Claude or Codex across sessions:** carry forward reviewed decisions, preferences and project context; save local checkpoints before compaction.
+- **Teams managing delivery requirements:** reuse versioned checklist templates, create independent release instances, and keep technical verification separate from human acceptance and waivers.
+- **Tool builders:** use the TypeScript packages, CLI JSON output or MCP interface to add project memory, acceptance reporting and task synchronization to an existing workflow.
+
+Loom stores project data in SQLite and offers a read-only web inspector. You choose the extraction provider: Claude through its remote API, Ollama locally, or recorded fixtures for offline demos. Remote extraction sends the selected source material to the configured provider; restricted projects refuse remote providers. Task writes, review publication and shared-memory server writes require their respective configuration opt-ins.
+
+## A typical workflow
+
+1. **Capture the source.** Import supported conversations, documents or tool logs; keep the original content and its hash.
+2. **Extract and review memory.** Validate model-provided quotes against that source, inspect the resulting facts and decisions, and record corrections with history.
+3. **Resume with relevant context.** Search within the project, produce a bounded context excerpt, generate project documents, or expose memory through MCP. Optional lifecycle hooks add reflection and checkpoint prompts.
+4. **Define delivery criteria.** Start from a built-in topic pack or your own versioned checklist. Answer applicability questions and create a separate instance for each delivery.
+5. **Attach evidence.** Record verification results with the relevant environment and build revision. Old passes become stale when the revision changes.
+6. **Review and synchronize.** Preview task changes before publishing them to Beads or Task Master. Optionally generate a checklist-backed GitHub PR or GitLab MR description for explicit publication.
+
+Loom validates provenance and evidence metadata; people still review whether a cited statement is correct and whether the supplied evidence is sufficient. Its readiness report reflects the recorded criteria and evidence. External adapter and model verification remains a release requirement, as listed below.
 
 ---
 
@@ -265,6 +289,11 @@ See [the complete setup guide](docs/workspace.md) for copyable configuration, co
 | Acceptance | `assess --pack <id> \| --pack-file`, `questions --mode quick\|guided\|challenge`, `answer`, `criteria list`, `evidence add/import`, `waive`, `accept`, `reopen`, `revision set [--from-git]`, `report [--require-ready]` |
 | Tasks | `tasks init/preview/sync/list/pull/conflicts/resolve` |
 | Agents and UI | `mcp`, `inspect` |
+| Managed checklists | `checklists templates/template/create/list/show/report/export/archive` |
+| Private profile and layered notes | `profile show/set/delete`, `notes list/show/put/delete/context` |
+| Review requests | `reviews targets/define/show/delete/preview/publish` |
+| Lifecycle hooks and checkpoints | `hooks manifest/install/uninstall`, `hook run/usage`, `checkpoints list/show/delete` |
+| Optional memory server | `memory-server serve/pull/push` |
 | Database | `db status/backup/restore` |
 
 All commands accept `--json`. Without `--dir`, `loom` uses the nearest parent directory that contains `loom.config.json`. Exit codes: `0` success, `1` failed or not ready, `2` usage, `70` internal.
@@ -353,6 +382,9 @@ flowchart TB
 | `packages/normalize` | Opt-in plain-English rewrite with meaning checks (no compliance claim) |
 | `packages/acceptance` | Topic packs, questions, evidence evaluation, JUnit/CI/review importers |
 | `packages/artifacts` | FACTS / VISION / PLAN / STATUS / ACCEPTANCE + decision records |
+| `packages/workspace` | Versioned checklists, private profile, layered notes, portable project state, optional shared-memory client/server |
+| `packages/hooks` | Claude/Codex event adapters, reflection prompts, context usage checkpoints and hook installation |
+| `packages/review` | Checklist-backed review previews and GitHub PR / GitLab MR create/update adapters |
 | `packages/task-sync` | Derivation, previews, durable intents, conflict handling, two-way pull |
 | `packages/adapter-beads` / `adapter-taskmaster` | Beads 1.3.x / Task Master 0.43.x via their CLIs |
 | `packages/interface-mcp` | MCP server over stdio |
