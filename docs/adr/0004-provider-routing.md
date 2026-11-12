@@ -16,7 +16,8 @@ Plan §4: each routing task (extraction, summary, planning, review) has a policy
 - **Traces** record provider, model, attempt, outcome, failure category, latency, tokens and cost. They never include prompt or response text, and the CLI stores them in `routing_traces`.
 - **The first real provider is Claude via `@anthropic-ai/sdk` 1.3.0** (model `claude-opus-5-5` by default). SDK retries are disabled (`maxRetries: 0`) so attempt counts stay visible and bounded. Structured output uses `output_config.format` with a JSON Schema, and zod remains the authoritative validator. `stop_reason: refusal` is a permanent failure, so the router moves to the next *permitted* provider.
 - **Server-side model fallbacks are not enabled.** The API's own fallback would route to models the project policy does not list, which conflicts with the requirement that only policy-listed providers run.
-- **Cost** is computed from a small, dated price table. Models not in it, and any request with cache tokens, report `costUsd: null`.
+- **Cost** is computed from a small, dated price table, including prompt-cache reads and 5-minute/1-hour cache writes. Models not in it report `costUsd: null`.
+- **Prompt caching:** the Anthropic provider marks the system prompt (stable operator instructions) as the only cache breakpoint; messages carry per-request evidence and are never marked. `promptCaching: false` turns it off.
 - **Fixture provider**: `adapter: "fixture"` replays recorded JSON responses locally for CI and the offline demo. It is labelled as such in outputs and never counts as model evidence.
 
 ## Consequences

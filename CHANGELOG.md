@@ -4,6 +4,7 @@ All notable changes. Versions follow the plan's milestones. Nothing has been pub
 
 ## Unreleased
 
+- Cache the Anthropic system prompt across calls (prompt caching, on by default) and price cache reads and writes instead of reporting the cost as unknown.
 - Preserve Unicode in shared-memory uploads when UTF-8 characters span request chunks; enforce the upload limit in bytes.
 - Explain the intended audience, end-to-end workflow and workspace extensions in the README.
 - License the project under MIT (`LICENSE`); the bundle declares it.

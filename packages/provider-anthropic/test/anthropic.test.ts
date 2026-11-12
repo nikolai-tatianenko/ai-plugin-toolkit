@@ -85,11 +85,37 @@ describe("Anthropic provider (SDK against a local stub)", () => {
     expect(sent.body).toMatchObject({
       model: "claude-opus-5-5",
       max_tokens: 4000,
-      system: "operator instructions",
+      system: [{ type: "text", text: "operator instructions", cache_control: { type: "ephemeral" } }],
       messages: [{ role: "user", content: "evidence" }],
       output_config: { format: { type: "json_schema", schema: { type: "object" } } },
     });
     expect(sent.body.thinking).toBeUndefined();
+  });
+
+  it("reports prompt-cache tokens and prices reads and writes", async () => {
+    handler = (_body, _req, res) =>
+      reply(res, 200, message({ usage: { input_tokens: 100, output_tokens: 200, cache_read_input_tokens: 3000, cache_creation_input_tokens: 500 } }));
+    const result = await provider().complete(
+      { model: "claude-opus-5-5", system: "operator instructions", messages: [{ role: "user", content: "evidence" }] },
+      { signal: signal() },
+    );
+    expect(result.usage).toEqual({
+      inputTokens: 100,
+      outputTokens: 200,
+      cacheReadInputTokens: 3000,
+      cacheWriteInputTokens: 500,
+      costUsd: (100 * 4 + 3000 * 0.2 + 500 * 4 * 1.25 + 200 * 20) / 1e6,
+    });
+  });
+
+  it("sends a plain system string when prompt caching is off", async () => {
+    handler = (_body, _req, res) => reply(res, 200, message());
+    requests.length = 0;
+    await createAnthropicProvider({ apiKey: "sk-ant-test-key-0000000000", baseURL, promptCaching: false }).complete(
+      { model: "claude-opus-5-5", system: "operator instructions", messages: [{ role: "user", content: "evidence" }] },
+      { signal: signal() },
+    );
+    expect(requests[0]!.body.system).toBe("operator instructions");
   });
 
   it.each([
@@ -124,7 +150,11 @@ describe("Anthropic provider (SDK against a local stub)", () => {
 
   it("keeps unknown pricing unknown", () => {
     expect(estimateCostUsd("some-future-model", { input_tokens: 1, output_tokens: 1 } as never)).toBeNull();
-    expect(estimateCostUsd("claude-opus-5-5", { input_tokens: 1, output_tokens: 1, cache_read_input_tokens: 5 } as never)).toBeNull();
+  });
+
+  it("prices 1-hour cache writes at twice the input rate", () => {
+    const usage = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 1000, cache_creation: { ephemeral_1h_input_tokens: 400, ephemeral_5m_input_tokens: 600 } };
+    expect(estimateCostUsd("claude-opus-5-5", usage as never)).toBeCloseTo((600 * 4 * 1.25 + 400 * 4 * 2) / 1e6, 12);
   });
 });
 

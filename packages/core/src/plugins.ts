@@ -57,8 +57,13 @@ export interface CompletionRequest {
 }
 
 export interface Usage {
+  /** Input tokens billed at the full rate (excludes prompt-cache reads and writes). */
   inputTokens: number;
   outputTokens: number;
+  /** Input tokens served from the provider's prompt cache, when the provider reports any. */
+  cacheReadInputTokens?: number;
+  /** Input tokens written to the provider's prompt cache, when the provider reports any. */
+  cacheWriteInputTokens?: number;
   /** Unknown pricing stays `null`; it is never reported as zero. */
   costUsd: number | null;
 }

@@ -14,16 +14,18 @@ export const DEFAULT_ANTHROPIC_MODEL = "claude-opus-5-5";
 const DEFAULT_MAX_OUTPUT_TOKENS = 16_000;
 
 /**
- * Published first-party prices in USD per million tokens (input, output), as listed
- * in the Claude API reference used for this release. A model missing here reports
- * cost `null` (unknown), never zero. Cache tokens are not priced, so any cache usage
- * also makes the cost unknown.
+ * Published first-party prices in USD per million tokens (input, output, cache read),
+ * as listed in the Claude API reference used for this release. A model missing here
+ * reports cost `null` (unknown), never zero.
  */
-export const PRICING_USD_PER_MTOK: Readonly<Record<string, readonly [input: number, output: number]>> = {
-  "claude-opus-5-5": [4, 20],
-  "claude-sonnet-5-5": [2, 10],
-  "claude-fable-5-1": [10, 50],
+export const PRICING_USD_PER_MTOK: Readonly<Record<string, readonly [input: number, output: number, cacheRead: number]>> = {
+  "claude-opus-5-5": [4, 20, 0.2],
+  "claude-sonnet-5-5": [2, 10, 0.2],
+  "claude-fable-5-1": [10, 50, 0.25],
 };
+
+/** Cache writes are billed as a multiple of the input price, by TTL. */
+const CACHE_WRITE_MULTIPLIER = { "5m": 1.25, "1h": 2 } as const;
 
 export interface AnthropicProviderOptions {
   apiKey: string;
@@ -32,13 +34,24 @@ export interface AnthropicProviderOptions {
   baseURL?: string;
   /** Test seam: a fetch implementation (e.g. pointed at a local stub server). */
   fetch?: typeof fetch;
+  /**
+   * Mark the system prompt as a prompt-cache breakpoint (default `true`). Repeated calls
+   * with the same operator instructions, such as extraction over many sources, then
+   * read it at the cache price instead of paying full input each time.
+   */
+  promptCaching?: boolean;
 }
 
 export function estimateCostUsd(model: string, usage: Anthropic.Usage): number | null {
   const price = PRICING_USD_PER_MTOK[model];
   if (price === undefined) return null;
-  if ((usage.cache_creation_input_tokens ?? 0) > 0 || (usage.cache_read_input_tokens ?? 0) > 0) return null;
-  return (usage.input_tokens * price[0] + usage.output_tokens * price[1]) / 1_000_000;
+  const [input, output, cacheRead] = price;
+  const written = usage.cache_creation_input_tokens ?? 0;
+  // Without a TTL breakdown, assume the default 5-minute TTL, which is all this provider writes.
+  const written1h = usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
+  const writeCost = (written - written1h) * input * CACHE_WRITE_MULTIPLIER["5m"]
+    + written1h * input * CACHE_WRITE_MULTIPLIER["1h"];
+  return (usage.input_tokens * input + (usage.cache_read_input_tokens ?? 0) * cacheRead + writeCost + usage.output_tokens * output) / 1_000_000;
 }
 
 /** Map SDK errors to typed provider failures. Messages carry status and type only, never request content. */
@@ -81,6 +94,7 @@ export function createAnthropicProvider(options: AnthropicProviderOptions): Prov
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   });
   const defaultModel = options.model ?? DEFAULT_ANTHROPIC_MODEL;
+  const promptCaching = options.promptCaching ?? true;
 
   return defineProvider({
     manifest: {
@@ -102,7 +116,9 @@ export function createAnthropicProvider(options: AnthropicProviderOptions): Prov
       const system = [request.system, ...request.messages.filter((m) => m.role === "system").map((m) => m.content)]
         .filter((part): part is string => part !== undefined && part !== "")
         .join("\n\n");
-      if (system !== "") params.system = system;
+      // Only the system prompt is a breakpoint: messages carry per-request evidence, so
+      // caching them would pay the write premium on bytes that are never read back.
+      if (system !== "") params.system = promptCaching ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }] : system;
       if (request.responseFormat === "json" && request.jsonSchema !== undefined) {
         params.output_config = { format: { type: "json_schema", schema: request.jsonSchema } };
       }
@@ -131,6 +147,8 @@ export function createAnthropicProvider(options: AnthropicProviderOptions): Prov
         usage: {
           inputTokens: response.usage.input_tokens,
           outputTokens: response.usage.output_tokens,
+          ...(response.usage.cache_read_input_tokens ? { cacheReadInputTokens: response.usage.cache_read_input_tokens } : {}),
+          ...(response.usage.cache_creation_input_tokens ? { cacheWriteInputTokens: response.usage.cache_creation_input_tokens } : {}),
           costUsd: estimateCostUsd(model, response.usage),
         },
       };
